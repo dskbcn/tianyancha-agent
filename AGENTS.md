@@ -55,8 +55,10 @@ docs/plans/, docs/spikes/
 - Skill files are YAML front matter + Markdown: quote `description` (a `: ` inside breaks
   discovery and stops `pnpm dev`). `pnpm check:agent` catches it.
 - `eve dev` picks up tools, skills and instructions on the next turn. Channels and `packages/*`
-  need a restart. Sessions from before a restart are dormant (409 `session_not_active`); the web
-  UI continues them in a new session with the transcript as `history`.
+  need a restart. `pnpm dev` passes `--resume`, so waiting chats survive a restart. Without it,
+  or once eve prunes an old run, a send fails (dormant: a bare 500 "Failed to send the session
+  message."; cancelled: 409 `session_not_active`), and the web UI continues the chat in a new
+  session with the transcript as `history`.
 - Libraries for artifacts are bundled, not read from `node_modules`: `scripts/vendor-libs.mjs`
   writes `agent/lib/vendor/*.ts` on install (git-ignored). Add a library there and to `LIBRARIES`
   in `packages/artifacts`.

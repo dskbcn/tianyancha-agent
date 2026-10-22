@@ -309,7 +309,11 @@ function modelsByTurn(events: readonly { type: string; data?: unknown }[]): Map<
   return out
 }
 
-/** 409 session_not_active / session_stranded: the server will never run this session again. */
+/**
+ * The server will not run this session again: 409 session_not_active / session_stranded, or, from
+ * `eve dev` without --resume, a dormant run, which fails as a bare 500 "Failed to send the session
+ * message." (no code). A transient 500 matches too; the chat then continues from its transcript.
+ */
 function isSessionEnded(error: unknown): boolean {
   for (
     let e: unknown = error, depth = 0;
@@ -325,6 +329,7 @@ function isSessionEnded(error: unknown): boolean {
     const text = [body, code, message].filter((v) => typeof v === 'string').join(' ')
     if (/session_not_active|session_stranded/.test(text)) return true
     if (status === 409 && /no longer active|stranded/i.test(text)) return true
+    if (/Failed to send the session message/.test(text)) return true
   }
   return false
 }

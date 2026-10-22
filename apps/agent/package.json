@@ -7,8 +7,8 @@
     "#*": "./agent/*"
   },
   "scripts": {
-    "dev": "sh ./scripts/with-env.sh eve dev --port 2000 --no-ui",
-    "dev:tui": "sh ./scripts/with-env.sh eve dev --port 2000",
+    "dev": "sh ./scripts/with-env.sh eve dev --port 2000 --no-ui --resume",
+    "dev:tui": "sh ./scripts/with-env.sh eve dev --port 2000 --resume",
     "build": "sh ./scripts/with-env.sh eve build",
     "start": "eve start",
     "typecheck": "tsc --noEmit",
