@@ -9,6 +9,8 @@ export interface SavedChat {
   updatedAt: number
   session?: ClientSessionState
   events?: readonly MessageStreamEvent[]
+  /** The model the user picked for this chat; the server's default when unset. */
+  model?: string
 }
 
 const KEY = 'tianyancha-agent:chats'

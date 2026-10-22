@@ -36,4 +36,8 @@ opens eve's terminal UI instead. CSV results land in `output/<sessionId>/`.
 ```sh
 pnpm typecheck
 pnpm test
+pnpm --filter @tianyancha-agent/agent exec eve info   # agent discovery: must say "0 errors"
 ```
+
+Skill files are YAML front matter plus Markdown: quote a `description` that contains `: `, or
+discovery fails and `pnpm dev` stops.

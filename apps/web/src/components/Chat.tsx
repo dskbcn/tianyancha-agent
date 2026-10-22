@@ -3,6 +3,7 @@ import { Activity, AlertCircle, PanelRight, RotateCcw } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArtifactPanelContext, collectArtifacts, draftParts, type PanelTarget } from '../artifacts.ts'
 import type { SavedChat } from '../chats.ts'
+import { modelLabel, type ModelCatalog } from '../models.ts'
 import { ArtifactPanel } from './ArtifactPanel.tsx'
 import { Composer } from './Composer.tsx'
 import { EmptyState } from './EmptyState.tsx'
@@ -13,9 +14,11 @@ import { InputRequestCard, MessageView } from './MessageView.tsx'
 export function Chat({
   chat,
   onUpdate,
+  models,
 }: {
   chat: SavedChat
   onUpdate: (patch: Partial<SavedChat>) => void
+  models: ModelCatalog | null
 }) {
   const agent = useEveAgent({
     initialEvents: chat.events ?? [],
@@ -63,9 +66,15 @@ export function Chat({
     setPanel(done ? { mode: 'artifact', id: done.id } : null)
   }, [panel, panelDraft, artifacts])
 
+  const model = chat.model ?? models?.default
+  const answeredBy = modelsByTurn(agent.events)
   const send = (text: string) => {
     if (messages.length === 0) onUpdate({ title: text.slice(0, 28) })
-    void agent.send(text, busy ? { turnPolicy: 'steer' } : undefined)
+    // The agent's eve channel turns this into the turn's model (apps/agent/agent/channels/eve.ts).
+    void agent.send(text, {
+      ...(model ? { clientContext: { model } } : {}),
+      ...(busy ? { turnPolicy: 'steer' as const } : {}),
+    })
   }
 
   // Follow the stream while the reader is near the bottom; leave them alone if they scrolled up.
@@ -107,11 +116,12 @@ export function Chat({
           ) : (
             <div className="mx-auto w-full max-w-3xl space-y-7 px-5 py-8">
               {messages.map((message, i) => (
-                <MessageView
-                  key={message.id}
-                  message={message}
-                  streaming={busy && i === messages.length - 1}
-                />
+                <div key={message.id}>
+                  <MessageView message={message} streaming={busy && i === messages.length - 1} />
+                  {message.role === 'assistant' && message.metadata?.turnId && answeredBy.get(message.metadata.turnId) && (
+                    <p className="mt-2 text-[11px] text-faint">{modelLabel(models, answeredBy.get(message.metadata.turnId))}</p>
+                  )}
+                </div>
               ))}
               {agent.status === 'submitted' && messages.at(-1)?.role === 'user' && <Thinking />}
               {stopped && <p className="text-xs text-faint">已停止。可以修改问题后重新发送。</p>}
@@ -147,6 +157,9 @@ export function Chat({
             onSend={send}
             onStop={() => void agent.cancel()}
             autoFocus
+            models={models}
+            model={model}
+            onModel={(id) => onUpdate({ model: id })}
           />
           <p className="mt-2 text-center text-[11px] text-faint">
             数据为天眼查同源工商数据，仅覆盖杭州、深圳的部分时间段；数字以工具查询结果为准。
@@ -219,4 +232,16 @@ function lastTurnOutcome(events: readonly { type: string }[]): string | undefine
     if (type === 'turn.completed' || type === 'turn.cancelled' || type === 'turn.failed') return type
   }
   return undefined
+}
+
+/** turnId → the model that served its last step, from step.started events (eve reports `modelId`). */
+function modelsByTurn(events: readonly { type: string; data?: unknown }[]): Map<string, string> {
+  const out = new Map<string, string>()
+  for (const event of events) {
+    if (event.type !== 'step.started') continue
+    const data = event.data as { turnId?: unknown; modelId?: unknown; model?: { id?: unknown } } | undefined
+    const id = typeof data?.modelId === 'string' ? data.modelId : typeof data?.model?.id === 'string' ? data.model.id : undefined
+    if (typeof data?.turnId === 'string' && id) out.set(data.turnId, id.replace(/^bailian[./:]/, ''))
+  }
+  return out
 }

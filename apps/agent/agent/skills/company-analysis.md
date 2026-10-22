@@ -1,5 +1,5 @@
 ---
-description: Use before the first company_sql / company_find / company_profile call in a session — field reference, data coverage, and SQL pitfalls for the 企业工商 tables.
+description: "Use before the first company_sql / company_find / company_profile call in a session — field reference, data coverage, and SQL pitfalls for the 企业工商 tables."
 ---
 
 # 企业库查询要点

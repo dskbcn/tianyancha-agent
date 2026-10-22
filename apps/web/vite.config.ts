@@ -16,6 +16,7 @@ export default defineConfig({
       '/eve': { target: AGENT, changeOrigin: true },
       '/files': { target: AGENT, changeOrigin: true },
       '/artifacts': { target: AGENT, changeOrigin: true },
+      '/models': { target: AGENT, changeOrigin: true },
     },
   },
 })

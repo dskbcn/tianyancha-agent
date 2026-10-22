@@ -1,5 +1,5 @@
 ---
-description: Use before artifact_publish / artifact_edit — making HTML artifacts from query results: charts, dashboards, infographics, slide decks, reports. Data wiring, sandbox rules, ECharts, layout and per-kind guidance.
+description: "Use before artifact_publish / artifact_edit — making HTML artifacts from query results (charts, dashboards, infographics, slide decks, reports): data wiring, sandbox rules, ECharts, layout and per-kind guidance."
 ---
 
 # 做 HTML 产物

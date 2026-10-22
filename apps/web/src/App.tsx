@@ -2,9 +2,11 @@ import { MessageSquarePlus, Trash2 } from 'lucide-react'
 import { useChats } from './chats.ts'
 import { Chat } from './components/Chat.tsx'
 import { relativeTime } from './format.ts'
+import { modelLabel, useModels } from './models.ts'
 
 export function App() {
   const { chats, active, select, create, update, remove } = useChats()
+  const models = useModels()
 
   return (
     <div className="flex h-full">
@@ -56,11 +58,11 @@ export function App() {
           ))}
         </nav>
         <div className="border-t border-line px-4 py-3 text-[11px] leading-relaxed text-faint">
-          模型 deepseek-v4.1-flash · 数据源 企业库查询 MCP
+          默认模型 {modelLabel(models, models?.default) ?? '…'} · 数据源 企业库查询 MCP
         </div>
       </aside>
       <main className="flex min-w-0 flex-1 bg-bg">
-        <Chat key={active.id} chat={active} onUpdate={(patch) => update(active.id, patch)} />
+        <Chat key={active.id} chat={active} models={models} onUpdate={(patch) => update(active.id, patch)} />
       </main>
     </div>
   )
