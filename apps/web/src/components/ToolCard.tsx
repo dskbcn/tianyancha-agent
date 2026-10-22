@@ -8,7 +8,10 @@ import {
   Copy,
   Database,
   Download,
+  ExternalLink,
+  FileText,
   Loader2,
+  Newspaper,
   Search,
   Wrench,
   X,
@@ -49,12 +52,42 @@ interface ErrorOutput {
   sql?: string
   error: string
 }
-type ToolOutput = TableOutput | ProfileOutput | ErrorOutput
+interface ArticleRow {
+  article_id: number
+  title: string
+  publish_date: string
+  url: string
+  company_name: string | null
+  district: string | null
+  settle_type: string | null
+  read_count: number | null
+  snippet: string
+  score: number | null
+}
+interface ArticlesOutput {
+  kind: 'articles'
+  query: string
+  rows: ArticleRow[]
+  ms: number
+  file: { name: string; url: string; rows: number } | null
+}
+interface ArticleOutput extends Omit<ArticleRow, 'snippet' | 'score'> {
+  kind: 'article'
+  account_name: string
+  origin_city: string | null
+  content_text: string
+  total_chars: number
+  offset: number
+  next_offset: number | null
+}
+type ToolOutput = TableOutput | ProfileOutput | ArticlesOutput | ArticleOutput | ErrorOutput
 
 const ICONS: Record<string, typeof Database> = {
   company_sql: Database,
   company_find: Search,
   company_profile: Building2,
+  article_search: Newspaper,
+  article_read: FileText,
 }
 
 export function ToolCard({ part }: { part: EveDynamicToolPart }) {
@@ -142,6 +175,8 @@ export function ToolCard({ part }: { part: EveDynamicToolPart }) {
           {output?.kind === 'error' && <ErrorBox text={output.error} />}
           {output?.kind === 'table' && <TableResult output={output} />}
           {output?.kind === 'profile' && <ProfileResult output={output} />}
+          {output?.kind === 'articles' && <ArticleList output={output} />}
+          {output?.kind === 'article' && <ArticleView output={output} />}
         </div>
       )}
     </div>
@@ -191,6 +226,88 @@ function TableResult({ output }: { output: TableOutput }) {
         <p className="text-sm text-muted">无结果。</p>
       )}
     </>
+  )
+}
+
+function ArticleList({ output }: { output: ArticlesOutput }) {
+  if (output.rows.length === 0) return <p className="text-sm text-muted">没有找到相关文章。</p>
+  return (
+    <>
+      <div className="flex items-center gap-4 text-xs text-muted">
+        <span>
+          <b className="font-semibold text-fg">{output.rows.length}</b> 篇 · 按相关度
+        </span>
+        <span>用时 {seconds(output.ms)}</span>
+        {output.file && (
+          <a
+            href={output.file.url}
+            download
+            className="ml-auto inline-flex items-center gap-1.5 rounded-md border border-line px-2.5 py-1 font-medium text-fg hover:border-accent hover:text-accent"
+          >
+            <Download className="size-3.5" />
+            下载 CSV
+          </a>
+        )}
+      </div>
+      <ol className="divide-y divide-line overflow-hidden rounded-lg border border-line">
+        {output.rows.map((row) => (
+          <li key={row.article_id} className="space-y-1 px-3 py-2.5">
+            <a
+              href={row.url}
+              target="_blank"
+              rel="noreferrer"
+              className="group inline-flex items-start gap-1.5 text-sm font-medium hover:text-accent"
+            >
+              {row.title}
+              <ExternalLink className="mt-0.5 size-3 shrink-0 text-faint group-hover:text-accent" />
+            </a>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-muted">
+              <span className="tabular-nums">{row.publish_date}</span>
+              {row.settle_type && (
+                <span className="rounded bg-accent-soft px-1.5 text-accent">{row.settle_type}</span>
+              )}
+              {row.district && <span>{row.district}</span>}
+              {row.company_name && <span className="truncate">· {row.company_name}</span>}
+            </div>
+            {row.snippet && (
+              <p className="line-clamp-2 text-xs leading-relaxed text-muted">{row.snippet}</p>
+            )}
+          </li>
+        ))}
+      </ol>
+    </>
+  )
+}
+
+function ArticleView({ output }: { output: ArticleOutput }) {
+  return (
+    <div className="space-y-2">
+      <a
+        href={output.url}
+        target="_blank"
+        rel="noreferrer"
+        className="group inline-flex items-start gap-1.5 text-sm font-medium hover:text-accent"
+      >
+        {output.title}
+        <ExternalLink className="mt-0.5 size-3 shrink-0 text-faint group-hover:text-accent" />
+      </a>
+      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+        <span>{output.account_name}</span>
+        <span className="tabular-nums">{output.publish_date}</span>
+        {output.settle_type && <span>{output.settle_type}</span>}
+        {output.company_name && <span>{output.company_name}</span>}
+        <span>
+          {output.total_chars.toLocaleString('zh-CN')} 字
+          {output.next_offset !== null
+            ? ` · 已读到 ${output.offset + output.content_text.length}`
+            : ''}
+        </span>
+      </div>
+      <p className="max-h-48 overflow-auto rounded-lg bg-sunken px-3 py-2 text-xs leading-relaxed whitespace-pre-wrap text-fg/80">
+        {output.content_text.slice(0, 1200)}
+        {output.content_text.length > 1200 ? '…' : ''}
+      </p>
+    </div>
   )
 }
 

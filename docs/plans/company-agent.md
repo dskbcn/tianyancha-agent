@@ -52,6 +52,10 @@ MCP server `企业库查询` v4.1.3, Streamable HTTP at `COMPANY_DB_MCP_URL`, au
 | `semantic_search` | Top-k `company_id` + score over business-scope vectors; needs a join for names |
 | `vector_search_info` | Vector index status |
 
+Added upstream on 2026-10-22 (spike 0.5): `search_articles`, `get_article`, `article_facets`
+over 公众号文章 about companies settling in 杭州 (tables `wechat_articles`,
+`wechat_article_chunks`; `wechat_articles.company_id` = `tyc_advanced_search_companies.id`).
+
 Tables:
 
 - `tyc_advanced_search_companies`: 37 columns. Name, status, legal representative, size,
@@ -142,6 +146,8 @@ web UI can render a result's preview table and a download link from the same too
 | `company_sql` | `query` | Columns, row count, `truncated` (ours, not the server's), 20-row preview, CSV path, warnings (non-ISO date literal, `date_trunc`, `province` filter) |
 | `company_find` | `find_companies` | `keyword_hits`, `semantic_only`, `score_distribution`, top 20, CSV path |
 | `company_profile` | `query_table` by USCC or name (`ilike`, ≤ 10 candidates) | One company's record, or the candidate list to choose from |
+| `article_search` | `search_articles` | Articles by relevance: date, type, district, title, company, link, snippet; result file for artifacts |
+| `article_read` | `get_article` | Metadata and up to 8,000 chars of the body, with the offset to continue |
 | `company_similar` (phase 2) | `semantic_search` + join | Top-k companies like a description |
 | `read_output` | local files | Paged slice of a saved CSV/Markdown (`offset`/`limit`), confined to `OUTPUT_DIR` |
 | `write_report` | local files | Path of a Markdown report: question, findings, tables, the SQL used, coverage, as-of time |
@@ -204,6 +210,9 @@ Most of this phase was built as the 0.4 preview (merged to `main` 2026-10-22). S
 - **1.7 Artifacts in a build.** New. `lib/artifacts.ts` reads ECharts from `node_modules` at
   runtime; `eve build` output is self-contained, so copy the library into the build and
   verify an artifact renders from `node .output/server/index.mjs`.
+
+- **1.8 Articles.** Done (spike 0.5): `article_search`, `article_read`, skill `company-news`,
+  article cards in the web UI.
 
 ### Phase 2: analysis quality
 

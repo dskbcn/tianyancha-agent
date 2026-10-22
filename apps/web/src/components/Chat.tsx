@@ -209,7 +209,7 @@ export function Chat({
               onModel={(id) => onUpdate({ model: id })}
             />
             <p className="mt-2 text-center text-[11px] text-faint">
-              数据为天眼查同源工商数据，仅覆盖杭州、深圳的部分时间段；数字以工具查询结果为准。
+              工商数据为天眼查同源，仅覆盖杭州、深圳的部分时间段；落地动态来自公众号文章（媒体报道）。数字以工具查询结果为准。
             </p>
           </div>
         </div>

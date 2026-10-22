@@ -1,4 +1,4 @@
-import { BarChart3, Building2, ListChecks, TrendingDown } from 'lucide-react'
+import { BarChart3, Building2, ListChecks, Newspaper, TrendingDown } from 'lucide-react'
 
 const EXAMPLES = [
   { icon: BarChart3, text: '杭州市 2026 年 8 月新成立了多少家企业？按区县列出前 5。' },
@@ -6,6 +6,10 @@ const EXAMPLES = [
   {
     icon: TrendingDown,
     text: '深圳 2020–2025 年各年份成立的企业，现在注销或吊销的比例分别是多少？',
+  },
+  {
+    icon: Newspaper,
+    text: '2026 年有哪些企业把总部迁到了杭州？迁入企业的行业和注册资本分布怎样？',
   },
   { icon: Building2, text: '查一下统一社会信用代码 91330114MAKNH69N9Q 的公司。' },
 ]
@@ -15,13 +19,14 @@ export function EmptyState({ onPick }: { onPick: (text: string) => void }) {
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center px-4 py-10">
       <h1 className="text-2xl font-semibold tracking-tight">企业数据分析</h1>
       <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">
-        基于企业工商库（天眼查同源）回答数量、趋势、分布、名单和单个企业的问题。完整结果可下载为
+        基于企业工商库（天眼查同源）回答数量、趋势、分布、名单和单个企业的问题，也能检索杭州企业落地动态的公众号文章。完整结果可下载为
         CSV。
       </p>
       <div className="mt-4 flex flex-wrap gap-2 text-xs">
         <Chip>杭州 · 2017-07 至 2026-09-30</Chip>
         <Chip>深圳 · 2020-01 至 2026-05-20</Chip>
         <Chip>约 47% 为个体工商户</Chip>
+        <Chip>落地动态 · 公众号文章 2025-02 起</Chip>
       </div>
       <div className="mt-8 grid gap-2.5 sm:grid-cols-2">
         {EXAMPLES.map(({ icon: Icon, text }) => (

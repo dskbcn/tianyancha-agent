@@ -1,3 +1,11 @@
+export {
+  ARTICLES,
+  readArticle,
+  searchArticles,
+  type Article,
+  type ArticleHit,
+  type ArticleSearchInput,
+} from './articles.ts'
 export { cleanError, CompanyDb, CompanyDbError, type CompanyDbConfig } from './client.ts'
 export { toCsv } from './csv.ts'
 export {
