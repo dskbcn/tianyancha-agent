@@ -10,6 +10,8 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   server: {
     port: 5173,
+    // Fail loudly on a busy port rather than moving to 5174 next to a stale server.
+    strictPort: true,
     proxy: {
       '/eve': { target: AGENT, changeOrigin: true },
       '/files': { target: AGENT, changeOrigin: true },
