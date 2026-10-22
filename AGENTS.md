@@ -36,8 +36,10 @@ docs/plans/, docs/spikes/
   Libraries are served from our side (`<script src="lib:echarts">`), never a CDN.
 - **`packages/*` stay framework-free.** oxlint enforces it (`.oxlintrc.json`). Apps adapt
   packages, never the other way round.
-- **One auth policy.** Every channel and route calls `routePolicy()` from
-  `apps/agent/agent/lib/auth.ts` (`routeAuth` for custom routes).
+- **One auth policy.** The eve channel uses `routePolicy()` from `apps/agent/agent/lib/auth.ts`.
+  Custom routes start with `const refused = await denied(request); if (refused) return refused`.
+  eve's `routeAuth` _returns_ its 401 instead of throwing, so awaiting it alone protects nothing
+  (that shipped once; caught in a production build).
 - **Models are an allowlist.** `apps/agent/agent/lib/models.ts`; the eve channel accepts a model
   from `clientContext.model` only if listed. Bailian needs `maxOutputTokens` set (its default is
   8,192, too short for artifacts).
@@ -55,6 +57,11 @@ docs/plans/, docs/spikes/
 - `eve dev` picks up tools, skills and instructions on the next turn. Channels and `packages/*`
   need a restart. Sessions from before a restart are dormant (409 `session_not_active`); the web
   UI continues them in a new session with the transcript as `history`.
+- Libraries for artifacts are bundled, not read from `node_modules`: `scripts/vendor-libs.mjs`
+  writes `agent/lib/vendor/*.ts` on install (git-ignored). Add a library there and to `LIBRARIES`
+  in `packages/artifacts`.
+- Run a production build (`node .output/server/index.mjs`) from a copy outside `apps/agent`:
+  inside it, it shares `.eve/.workflow-data` with `eve dev` and rewrites its version marker.
 - A dynamic model may return a live `LanguageModel` only from `step.started` (session and turn
   selections must be AI Gateway id strings), which is why `agent.ts` resolves there.
 

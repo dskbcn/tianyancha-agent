@@ -1,8 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import path from 'node:path'
 import { defineChannel, GET } from 'eve/channels'
-import { routeAuth } from 'eve/channels/auth'
-import { routePolicy } from '#lib/auth.ts'
+import { denied } from '#lib/auth.ts'
 import { outputRoot, safe } from '#lib/db.ts'
 
 /**
@@ -12,7 +11,8 @@ import { outputRoot, safe } from '#lib/db.ts'
 export default defineChannel({
   routes: [
     GET('/files/:sessionId/:name', async (request, { params }) => {
-      await routeAuth(request, routePolicy('tianyancha-agent'))
+      const refused = await denied(request)
+      if (refused) return refused
       const name = decodeURIComponent(params.name)
       if (!name.endsWith('.csv') || safe(name.slice(0, -4)) !== name.slice(0, -4)) {
         return new Response('not found', { status: 404 })

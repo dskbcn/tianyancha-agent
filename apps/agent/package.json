@@ -12,7 +12,8 @@
     "build": "sh ./scripts/with-env.sh eve build",
     "start": "eve start",
     "typecheck": "tsc --noEmit",
-    "check": "sh ./scripts/check-discovery.sh"
+    "check": "sh ./scripts/check-discovery.sh",
+    "postinstall": "node scripts/vendor-libs.mjs"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "3.0.75",

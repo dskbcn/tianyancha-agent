@@ -28,3 +28,5 @@ jobs:
       - run: pnpm test
       # Agent discovery needs no credentials: it compiles the agent without calling a model.
       - run: pnpm check:agent
+      # Production builds: eve build (agent, with vendored libraries) and vite build (web).
+      - run: pnpm build

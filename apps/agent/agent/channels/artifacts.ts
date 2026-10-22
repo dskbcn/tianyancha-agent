@@ -1,8 +1,7 @@
 import { ARTIFACT_CSP_HEADER } from '@tianyancha-agent/artifacts'
 import { defineChannel, GET } from 'eve/channels'
-import { routeAuth } from 'eve/channels/auth'
 import { preparedPage } from '#lib/artifacts.ts'
-import { routePolicy } from '#lib/auth.ts'
+import { denied } from '#lib/auth.ts'
 
 /**
  * Serves an artifact version with its data and libraries, behind the chat's auth. The CSP header
@@ -13,7 +12,8 @@ import { routePolicy } from '#lib/auth.ts'
 export default defineChannel({
   routes: [
     GET('/artifacts/:sessionId/:id/:version', async (request, { params }) => {
-      await routeAuth(request, routePolicy('tianyancha-agent'))
+      const refused = await denied(request)
+      if (refused) return refused
       const version = Number(params.version)
       if (!Number.isInteger(version) || version < 1)
         return new Response('not found', { status: 404 })

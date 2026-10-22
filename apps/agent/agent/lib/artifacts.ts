@@ -1,8 +1,8 @@
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
-import { createRequire } from 'node:module'
 import path from 'node:path'
 import { prepare, type DataTable, type Library } from '@tianyancha-agent/artifacts'
 import { outputRoot, safe } from '#lib/db.ts'
+import echarts from '#lib/vendor/echarts.ts'
 
 /**
  * Artifacts live next to a session's query results:
@@ -104,21 +104,11 @@ export async function loadData(
   return out
 }
 
-const require = createRequire(import.meta.url)
-const libraryCache = new Map<Library, string>()
-
-/** Library sources, read once from node_modules. Pinned versions: see apps/agent/package.json. */
-async function librarySources(names: Iterable<Library>): Promise<Partial<Record<Library, string>>> {
-  const out: Partial<Record<Library, string>> = {}
-  for (const name of names) {
-    if (!libraryCache.has(name)) {
-      const file = { echarts: 'echarts/dist/echarts.min.js' }[name]
-      libraryCache.set(name, await readFile(require.resolve(file), 'utf8'))
-    }
-    out[name] = libraryCache.get(name)!
-  }
-  return out
-}
+/**
+ * Library sources, bundled with the agent (scripts/vendor-libs.mjs generates lib/vendor/ on
+ * install), so a production build serves them without node_modules.
+ */
+const LIBRARY_SOURCES: Record<Library, string> = { echarts }
 
 /** The page as the browser gets it: with DATA and inlined libraries. */
 export async function preparedPage(
@@ -135,7 +125,7 @@ export async function preparedPage(
   )
   const html = prepare(raw, {
     data: await loadData(sessionId, entry.data),
-    libraries: await librarySources(libraries),
+    libraries: pick(libraries),
   })
   return { html, meta }
 }
@@ -160,4 +150,8 @@ export async function missingData(
     '页面读取了 DATA，但 data 参数为空。用 data 把别名映射到查询结果文件，例如 {"monthly":"<结果文件名>"}；' +
     `不要在页面里写备用数据。本会话可用的结果：${known.length ? known.join('、') : '（还没有，先查询）'}`
   )
+}
+
+function pick(names: Library[]): Partial<Record<Library, string>> {
+  return Object.fromEntries(names.map((name) => [name, LIBRARY_SOURCES[name]]))
 }

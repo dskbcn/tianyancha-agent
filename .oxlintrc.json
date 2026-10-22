@@ -5,7 +5,13 @@
     "correctness": "error",
     "suspicious": "warn"
   },
-  "ignorePatterns": ["**/dist/**", "**/.eve/**", "**/.output/**", "output/**"],
+  "ignorePatterns": [
+    "**/dist/**",
+    "**/.eve/**",
+    "**/.output/**",
+    "output/**",
+    "apps/agent/agent/lib/vendor/**"
+  ],
   "rules": {
     "typescript/no-explicit-any": "warn",
     "no-unused-vars": [

@@ -1,5 +1,5 @@
 import { defaultEveAuth, eveChannel } from 'eve/channels/eve'
-import { routePolicy } from '#lib/auth.ts'
+import { REALM, routePolicy } from '#lib/auth.ts'
 import { isOffered } from '#lib/models.ts'
 
 // A transcript carried into a fresh session when the old one ended (dev restart, redeploy).
@@ -7,7 +7,7 @@ const HISTORY_ENTRIES = 40
 const HISTORY_ENTRY_CHARS = 8_000
 
 export default eveChannel({
-  auth: routePolicy('tianyancha-agent'),
+  auth: routePolicy(REALM),
   /**
    * The web UI sends app state in `clientContext`, none of which is for the model:
    * - `model`: the chosen model. Moved onto the turn's auth attributes, where agent.ts reads it.

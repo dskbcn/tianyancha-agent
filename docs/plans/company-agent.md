@@ -207,9 +207,11 @@ Most of this phase was built as the 0.4 preview (merged to `main` 2026-10-22). S
   conversation is ~900 events, so it fills after tens of chats, and chats do not follow the
   user to another browser). Keep the chat list and each chat's session cursor on the agent,
   and render history by replaying the session stream.
-- **1.7 Artifacts in a build.** New. `lib/artifacts.ts` reads ECharts from `node_modules` at
-  runtime; `eve build` output is self-contained, so copy the library into the build and
-  verify an artifact renders from `node .output/server/index.mjs`.
+- **1.7 Artifacts in a build.** Done. ECharts is vendored into the agent bundle on install
+  (`scripts/vendor-libs.mjs`). Verified from a copy of `.output` outside the repo, in
+  production mode with basic auth: a new artifact rendered with ECharts. The same run found the
+  custom routes (`/files`, `/artifacts`, `/models`) unauthenticated, because `routeAuth` returns
+  its 401 rather than throwing; fixed with `denied()` in `lib/auth.ts`. CI now runs `pnpm build`.
 
 - **1.8 Articles.** Done (spike 0.5): `article_search`, `article_read`, skill `company-news`,
   article cards in the web UI.

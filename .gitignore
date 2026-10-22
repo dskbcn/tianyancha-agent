@@ -8,3 +8,4 @@ dist/
 *.tsbuildinfo
 .DS_Store
 .scratch/
+apps/agent/agent/lib/vendor/
