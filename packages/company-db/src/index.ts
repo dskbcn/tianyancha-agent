@@ -1,4 +1,4 @@
-export { CompanyDb, CompanyDbError, type CompanyDbConfig } from './client.ts'
+export { cleanError, CompanyDb, CompanyDbError, type CompanyDbConfig } from './client.ts'
 export { CONTACT_COLUMNS, mentionsContacts, stripContacts, type Table } from './contacts.ts'
 export { toCsv } from './csv.ts'
 export {
@@ -11,7 +11,7 @@ export {
   type Options,
   type QueryResult,
 } from './operations.ts'
-export { lintSql, SERVER_ROW_CAP } from './sql.ts'
+export { lintSql, rejectSql, SERVER_ROW_CAP } from './sql.ts'
 
 /** Reads the data-source settings from the environment. Throws naming what is missing. */
 export function configFromEnv(env: NodeJS.ProcessEnv = process.env) {

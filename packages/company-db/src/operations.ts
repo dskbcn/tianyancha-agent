@@ -1,6 +1,6 @@
 import { CompanyDbError, type CompanyDb } from './client.ts'
 import { mentionsContacts, stripContacts, type Table } from './contacts.ts'
-import { lintSql, SERVER_ROW_CAP } from './sql.ts'
+import { lintSql, rejectSql, SERVER_ROW_CAP } from './sql.ts'
 
 export const COMPANIES = 'tyc_advanced_search_companies'
 
@@ -28,6 +28,8 @@ export async function runSql(
   sql: string,
   { limit = SERVER_ROW_CAP, ...options }: Options & { limit?: number },
 ): Promise<QueryResult> {
+  const rejected = rejectSql(sql)
+  if (rejected) throw new CompanyDbError(rejected)
   const warnings = lintSql(sql)
   if (!options.exposeContacts && mentionsContacts(sql).length > 0) {
     throw new CompanyDbError(

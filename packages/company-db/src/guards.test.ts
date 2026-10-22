@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { mentionsContacts, stripContacts } from './contacts.ts'
 import { toCsv } from './csv.ts'
-import { lintSql } from './sql.ts'
+import { cleanError } from './client.ts'
+import { lintSql, rejectSql } from './sql.ts'
 
 describe('stripContacts', () => {
   it('removes contact columns from columns and rows', () => {
@@ -39,5 +40,21 @@ describe('toCsv', () => {
   it('writes a BOM, quotes where needed, and leaves nulls empty', () => {
     const csv = toCsv(['a', 'b'], [{ a: '含,逗号', b: null }, { a: 'say "hi"', b: 2 }])
     expect(csv).toBe('﻿a,b\r\n"含,逗号",\r\n"say ""hi""",2\r\n')
+  })
+})
+
+describe('rejectSql', () => {
+  it('rejects a doubled paren after FILTER, as the model wrote it', () => {
+    expect(rejectSql("SELECT COUNT(*) FILTER ((WHERE company_name LIKE '%AI%')) FROM t")).toMatch(/FILTER/)
+  })
+
+  it('accepts FILTER with grouping inside WHERE', () => {
+    expect(rejectSql("SELECT COUNT(*) FILTER (WHERE (a LIKE '%x%' OR b LIKE '%y%') AND c = 1) FROM t")).toBeUndefined()
+  })
+})
+
+describe('cleanError', () => {
+  it('strips terminal escape codes from server messages', () => {
+    expect(cleanError('COUNT(*) FILTER ((\x1b[4mWHERE\x1b[0m company_name')).toBe('COUNT(*) FILTER ((WHERE company_name')
   })
 })

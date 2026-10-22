@@ -1,6 +1,17 @@
 /** `query` returns at most this many rows, and says `truncated: false` when it cut them (spike 0.1). */
 export const SERVER_ROW_CAP = 2000
 
+/**
+ * SQL that cannot run, caught before a round trip with a hint the model can act on.
+ * Returns the problem, or undefined when the statement may go to the server.
+ */
+export function rejectSql(sql: string): string | undefined {
+  if (/\bfilter\s*\(\s*\(\s*where\b/i.test(sql)) {
+    return 'SQL 语法错误：FILTER 后多了一层括号。写成 COUNT(*) FILTER (WHERE a OR b)，需要分组时用 FILTER (WHERE (a OR b) AND c)。'
+  }
+  return undefined
+}
+
 /** Pitfalls from spikes 0.2 and 0.3, reported to the model next to the result. */
 export function lintSql(sql: string): string[] {
   const warnings: string[] = []

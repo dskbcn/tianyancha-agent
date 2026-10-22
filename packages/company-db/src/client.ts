@@ -65,7 +65,7 @@ export class CompanyDb {
     const text = Array.isArray(result.content)
       ? result.content.map((part) => (part.type === 'text' ? part.text : '')).join('')
       : ''
-    if (result.isError) throw new CompanyDbError(text || `${name} failed`)
+    if (result.isError) throw new CompanyDbError(cleanError(text) || `${name} failed`)
     return result.structuredContent ?? JSON.parse(text)
   }
 
@@ -103,4 +103,9 @@ export class CompanyDb {
     if (next) next()
     else this.#free++
   }
+}
+
+/** Server errors carry sqlglot's terminal underline codes (ESC[4m … ESC[0m); drop them. */
+export function cleanError(text: string): string {
+  return text.replace(/\x1b\[[0-9;]*m/g, '').trim()
 }
