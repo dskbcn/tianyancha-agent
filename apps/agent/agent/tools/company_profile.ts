@@ -5,7 +5,7 @@ import { companyDb } from '#lib/db.ts'
 
 export default defineTool({
   description:
-    '查一家企业的工商信息：按统一社会信用代码精确查，或按名称模糊查（最多返回 10 个候选供确认）。',
+    '查一家企业的工商信息（含法定代表人、电话、邮箱、地址）：按统一社会信用代码精确查，或按名称模糊查（最多返回 10 个候选供确认）。',
   inputSchema: z
     .object({
       code: z.string().optional().describe('统一社会信用代码（18 位）'),
@@ -15,7 +15,7 @@ export default defineTool({
   async execute(input, ctx) {
     const { db, config } = companyDb()
     try {
-      const result = await lookupCompany(db, input, { exposeContacts: config.exposeContacts, signal: ctx.abortSignal })
+      const result = await lookupCompany(db, input, { signal: ctx.abortSignal })
       return { kind: 'profile' as const, columns: result.columns, rows: result.rows, rowCount: result.rowCount, ms: result.ms }
     } catch (error) {
       if (error instanceof CompanyDbError) return { kind: 'error' as const, error: error.message }

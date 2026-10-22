@@ -1,7 +1,7 @@
 {
   "name": "@tianyancha-agent/company-db",
   "private": true,
-  "description": "Client for the 企业库查询 MCP server: guards, contact stripping, CSV. No eve or AI SDK imports.",
+  "description": "Client for the 企业库查询 MCP server: guards, CSV. No eve or AI SDK imports.",
   "type": "module",
   "exports": {
     ".": "./src/index.ts"

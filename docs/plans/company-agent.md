@@ -94,7 +94,7 @@ were registered in 杭州 since 2017-07, and how many of them are 个体工商�
   full- and half-width bracket variants of the same type.
 - The join key is `company_id` on one table and `id` on the other.
 - Contact columns (`valid_mobile_phone`, `more_phones`, `email`, `other_email`) and
-  `legal_representative` are personal data (see open question 1).
+  `legal_representative` are returned like any other column (see "Personal data" below).
 
 ## Decisions (proposed)
 
@@ -106,7 +106,7 @@ were registered in 杭州 since 2017-07, and how many of them are 个体工商�
 | Results | Full result → `OUTPUT_DIR/<session>/<n>-<slug>.csv` (UTF-8 BOM so Excel opens it); the model sees columns, row count, a 20-row preview, the path, warnings | weixin's rule: the filesystem holds data, the context holds summaries |
 | Row caps | `query`: the `limit` argument on every call (page = 2,000, the server's cap); keyset/`OFFSET` paging up to `QUERY_ROW_CAP` (default 10,000) in total. `find_companies`: one call with `limit = FIND_ROW_CAP` (default 5,000), paging only if `next_offset` is set. At most `COMPANY_DB_CONCURRENCY` (3) calls in flight | The server cannot take unbounded reads, hides its own truncation (spike 0.1), and times out under load (spike 0.3) |
 | Model | Alibaba Cloud Bailian (百炼 / DashScope) OpenAI-compatible API through `@ai-sdk/openai-compatible`, unconditional provider in `agent.ts` (weixin's build-time rule applies); default `deepseek-v4.1-flash-1017`, `deepseek-v4-pro-0813` by config (spike 0.3) | Owner's choice. Both 15/15 on the golden set; flash faster and cheaper in tokens |
-| Personal data | Contact columns (`valid_mobile_phone`, `more_phones`, `email`, `other_email`) and `legal_representative` are stripped from model output and exports unless `EXPOSE_CONTACTS=true`. Enforced in `packages/company-db`, on the result rows, so free SQL cannot get around it | Owner's choice (open question 1) |
+| Personal data | No restriction: legal representative, phones, emails and addresses are returned, shown and exported like any other column. Revised 2026-10-22; until then they were stripped unless `EXPOSE_CONTACTS=true` | Owner's decision: public business-registration data, internal company tool |
 | Web UI | `apps/web`: static Vite app (React 19, Tailwind 4) on `useEveAgent` from `eve/react`, same origin through a proxy (Vite in dev, Caddy in production); downloads via an eve custom channel `GET /files/:session/:name` behind the chat's auth; Chinese UI. Not eve's Vercel-first `channel/web` installer (spike 0.4) | Owner's choice: non-technical users from v1 |
 | Sandbox | `justbash()`, built-in bash/file tools disabled | Aggregation runs server-side in SQL; no Docker needed. Revisit if we add Python post-processing |
 | Repo layout | pnpm workspace: `apps/agent` (eve), `packages/company-db` (framework-free client, guards, result writing) | face-platform pattern; the CLI and tests use the package without eve |
@@ -123,7 +123,6 @@ apps/agent (eve)
   instructions.md            always on: identity, coverage caveat, number rules
   skills/company-analysis    on demand: schema digest, pitfalls, SQL cookbook
   tools/company_*  ──────────▶ packages/company-db ── Streamable HTTP, X-API-Key ──▶ 企业库查询 MCP
-        │                      (contacts stripped here)
   model: Bailian OpenAI-compatible API
   tools/read_output, write_report      client · guards · CSV/report writer
         │
@@ -159,7 +158,6 @@ web UI can render a result's preview table and a download link from the same too
   when it counts companies.
 - `packages/company-db` imports no `eve`, `ai` or framework code (ESLint enforces it).
 - Credentials come from the environment only.
-- Contact columns leave `packages/company-db` only when `EXPOSE_CONTACTS=true`.
 
 ## Phases
 
@@ -231,7 +229,6 @@ QUERY_ROW_CAP=10000
 COMPANY_DB_CONCURRENCY=3
 FIND_ROW_CAP=5000
 OUTPUT_DIR=./output
-EXPOSE_CONTACTS=false
 ALIYUN_BAILIAN_API_HOST=https://dashscope.aliyuncs.com   # the client appends /compatible-mode/v1
 ALIYUN_BAILIAN_API_KEY=             # never commit
 ALIYUN_BAILIAN_MODEL=deepseek-v4.1-flash-1017
@@ -242,7 +239,8 @@ AGENT_PASSWORD=
 
 ## Answered questions (2026-10-22)
 
-1. **Personal data:** hidden by default, `EXPOSE_CONTACTS=true` to allow.
+1. **Personal data:** first hidden by default; revised the same day to no restriction (public
+   registration data, internal tool).
 2. **Model:** Alibaba Cloud Bailian through its OpenAI-compatible API (`@ai-sdk/openai-compatible`).
 3. **Interface:** web UI from phase 1 (item 1.5), plus the TUI and MCP channel.
 4. **Outputs:** CSV + Markdown in v1; xlsx in 2.2, charts in 2.4 / phase 4.

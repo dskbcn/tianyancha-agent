@@ -16,7 +16,7 @@ export default defineTool({
   async execute({ purpose, sql }, ctx) {
     const { db, config } = companyDb()
     try {
-      const result = await runSql(db, sql, { exposeContacts: config.exposeContacts, signal: ctx.abortSignal })
+      const result = await runSql(db, sql, { signal: ctx.abortSignal })
       const file =
         result.rowCount > 0
           ? await saveCsv(ctx.session.id, ctx.callId, purpose, result.columns, result.rows)

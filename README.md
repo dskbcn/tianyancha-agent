@@ -12,7 +12,7 @@
 |---|---|
 | [`apps/agent`](apps/agent) | eve agent: instructions, `company-analysis` skill, tools, eve + files channels |
 | [`apps/web`](apps/web) | Web chat (Vite, React 19, Tailwind 4) on `useEveAgent` |
-| [`packages/company-db`](packages/company-db) | MCP client, guards, contact stripping, CSV. No eve imports |
+| [`packages/company-db`](packages/company-db) | MCP client, guards, CSV. No eve imports |
 
 ## Run it
 

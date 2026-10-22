@@ -1,5 +1,4 @@
 export { cleanError, CompanyDb, CompanyDbError, type CompanyDbConfig } from './client.ts'
-export { CONTACT_COLUMNS, mentionsContacts, stripContacts, type Table } from './contacts.ts'
 export { toCsv } from './csv.ts'
 export {
   COMPANIES,
@@ -24,7 +23,6 @@ export function configFromEnv(env: NodeJS.ProcessEnv = process.env) {
     url,
     apiKey,
     concurrency: Number(env.COMPANY_DB_CONCURRENCY ?? 3),
-    exposeContacts: env.EXPOSE_CONTACTS === 'true',
     findRowCap: Number(env.FIND_ROW_CAP ?? 5000),
   }
 }

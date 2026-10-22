@@ -1,25 +1,7 @@
 import { describe, expect, it } from 'vitest'
-import { mentionsContacts, stripContacts } from './contacts.ts'
 import { toCsv } from './csv.ts'
 import { cleanError } from './client.ts'
 import { lintSql, rejectSql } from './sql.ts'
-
-describe('stripContacts', () => {
-  it('removes contact columns from columns and rows', () => {
-    const out = stripContacts({
-      columns: ['company_name', 'email', 'legal_representative'],
-      rows: [{ company_name: '甲', email: 'a@b.c', legal_representative: '张三' }],
-    })
-    expect(out.columns).toEqual(['company_name'])
-    expect(out.rows).toEqual([{ company_name: '甲' }])
-    expect(out.stripped).toEqual(['email', 'legal_representative'])
-  })
-
-  it('finds contact columns referenced under an alias', () => {
-    expect(mentionsContacts('SELECT valid_mobile_phone AS p FROM t')).toEqual(['valid_mobile_phone'])
-    expect(mentionsContacts('SELECT company_name FROM t')).toEqual([])
-  })
-})
 
 describe('lintSql', () => {
   it('flags the pitfalls from the spikes', () => {

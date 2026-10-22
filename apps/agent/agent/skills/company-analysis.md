@@ -19,7 +19,11 @@ description: Use before the first company_sql / company_find / company_profile c
 | industry_category / industry_major / industry_subcategory | 国标行业门类 / 大类 / 中类；门类 16% 为空 |
 | unified_social_credit_code | 统一社会信用代码 |
 | insured_person_count | 参保人数，TEXT 整数，69% 为空 |
-| registered_address, website, business_scope, former_names, tianyan_score | 地址、网址、经营范围、曾用名、天眼评分 |
+| legal_representative | 法定代表人（几乎全有） |
+| valid_mobile_phone, more_phones | 有效手机号、更多电话（约 31% / 14% 有值） |
+| email, other_email | 邮箱、其他邮箱（约 29% 有值） |
+| registered_address, latest_annual_report_address, mailing_address | 注册地址、最新年报地址、通信地址 |
+| website, business_scope, former_names, tianyan_score | 网址、经营范围、曾用名、天眼评分 |
 
 表 `tyc_business_scope_embeddings`（company_id = 上表 id）只用于语义检索，不要直接查。
 

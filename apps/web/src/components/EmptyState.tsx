@@ -18,7 +18,6 @@ export function EmptyState({ onPick }: { onPick: (text: string) => void }) {
         <Chip>杭州 · 2017-07 至 2026-09-30</Chip>
         <Chip>深圳 · 2020-01 至 2026-05-20</Chip>
         <Chip>约 47% 为个体工商户</Chip>
-        <Chip>联系人信息不开放</Chip>
       </div>
       <div className="mt-8 grid gap-2.5 sm:grid-cols-2">
         {EXAMPLES.map(({ icon: Icon, text }) => (

@@ -1,15 +1,15 @@
 import { CompanyDbError, type CompanyDb } from './client.ts'
-import { mentionsContacts, stripContacts, type Table } from './contacts.ts'
 import { lintSql, rejectSql, SERVER_ROW_CAP } from './sql.ts'
 
 export const COMPANIES = 'tyc_advanced_search_companies'
 
 export interface Options {
-  exposeContacts: boolean
   signal?: AbortSignal
 }
 
-export interface QueryResult extends Table {
+export interface QueryResult {
+  columns: string[]
+  rows: Record<string, unknown>[]
   rowCount: number
   /** Ours, not the server's: a full page may have been cut (spike 0.1). */
   truncated: boolean
@@ -32,15 +32,10 @@ export async function runSql(
   const rejected = rejectSql(sql)
   if (rejected) throw new CompanyDbError(rejected)
   const warnings = lintSql(sql)
-  if (!options.exposeContacts && mentionsContacts(sql).length > 0) {
-    throw new CompanyDbError(
-      `不允许查询联系人字段（${mentionsContacts(sql).join(', ')}）。这些字段默认不对外开放。`,
-    )
-  }
   const pageSize = Math.min(limit, SERVER_ROW_CAP)
   const started = performance.now()
   const result = (await db.call('query', { sql, limit: pageSize }, { signal: options.signal })) as ServerTable
-  return finish(result, pageSize, warnings, started, options)
+  return finish(result, pageSize, warnings, started)
 }
 
 export interface FindInput {
@@ -86,7 +81,6 @@ export async function findCompanies(
     Number.POSITIVE_INFINITY,
     [],
     started,
-    options,
   )
   return {
     ...table,
@@ -100,6 +94,7 @@ export async function findCompanies(
 const PROFILE_COLUMNS = [
   'id',
   'company_name',
+  'legal_representative',
   'unified_social_credit_code',
   'registration_status',
   'enterprise_type',
@@ -116,6 +111,12 @@ const PROFILE_COLUMNS = [
   'industry_subcategory',
   'insured_person_count',
   'registered_address',
+  'latest_annual_report_address',
+  'mailing_address',
+  'valid_mobile_phone',
+  'more_phones',
+  'email',
+  'other_email',
   'website',
   'former_names',
   'business_scope',
@@ -131,16 +132,14 @@ export async function lookupCompany(
   const filters = code
     ? { unified_social_credit_code: code }
     : { company_name: { op: 'ilike', value: `%${name}%` } }
-  const columns = options.exposeContacts
-    ? [...PROFILE_COLUMNS, 'legal_representative', 'valid_mobile_phone', 'email']
-    : PROFILE_COLUMNS
+  const columns = PROFILE_COLUMNS
   const started = performance.now()
   const result = (await db.call(
     'query_table',
     { table: COMPANIES, columns, filters, limit: code ? 1 : 10 },
     { signal: options.signal },
   )) as ServerTable
-  return finish({ ...result, columns: result.columns ?? columns }, code ? 1 : 10, [], started, options)
+  return finish({ ...result, columns: result.columns ?? columns }, code ? 1 : 10, [], started)
 }
 
 function finish(
@@ -148,15 +147,10 @@ function finish(
   pageSize: number,
   warnings: string[],
   started: number,
-  { exposeContacts }: Options,
 ): QueryResult {
-  const columns = result.columns ?? Object.keys(result.rows[0] ?? {})
-  const table = exposeContacts
-    ? { columns, rows: result.rows }
-    : stripContacts({ columns, rows: result.rows })
   return {
-    columns: table.columns,
-    rows: table.rows,
+    columns: result.columns ?? Object.keys(result.rows[0] ?? {}),
+    rows: result.rows,
     rowCount: result.rows.length,
     truncated: result.rows.length >= pageSize,
     warnings,

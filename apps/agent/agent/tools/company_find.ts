@@ -29,7 +29,7 @@ export default defineTool({
       const result = await findCompanies(
         db,
         { ...input, limit: config.findRowCap },
-        { exposeContacts: config.exposeContacts, signal: ctx.abortSignal },
+        { signal: ctx.abortSignal },
       )
       const file =
         result.rowCount > 0
