@@ -17,8 +17,9 @@ export interface QueryResult extends Table {
   ms: number
 }
 
+/** `query` sends `columns`; `query_table` sends only `table`, `row_count` and `rows`. */
 interface ServerTable {
-  columns: string[]
+  columns?: string[]
   rows: Record<string, unknown>[]
   row_count: number
 }
@@ -139,7 +140,7 @@ export async function lookupCompany(
     { table: COMPANIES, columns, filters, limit: code ? 1 : 10 },
     { signal: options.signal },
   )) as ServerTable
-  return finish(result, code ? 1 : 10, [], started, options)
+  return finish({ ...result, columns: result.columns ?? columns }, code ? 1 : 10, [], started, options)
 }
 
 function finish(
@@ -149,9 +150,10 @@ function finish(
   started: number,
   { exposeContacts }: Options,
 ): QueryResult {
+  const columns = result.columns ?? Object.keys(result.rows[0] ?? {})
   const table = exposeContacts
-    ? { columns: result.columns, rows: result.rows }
-    : stripContacts({ columns: result.columns, rows: result.rows })
+    ? { columns, rows: result.rows }
+    : stripContacts({ columns, rows: result.rows })
   return {
     columns: table.columns,
     rows: table.rows,
