@@ -20,6 +20,13 @@ export function Chat({
   onUpdate: (patch: Partial<SavedChat>) => void
   models: ModelCatalog | null
 }) {
+  // When the server no longer has this chat's session (dev restart, redeploy), the next send
+  // fails with 409 session_not_active. Start a new session that carries the conversation as text.
+  const pending = useRef<string | null>(null)
+  const restarting = useRef(false)
+  const latest = useRef<{ messages: readonly EveMessage[]; model?: string }>({ messages: [] })
+  const continueFresh = useRef<(text: string) => void>(() => {})
+  const [notice, setNotice] = useState<string | null>(null)
   const agent = useEveAgent({
     initialEvents: chat.events ?? [],
     initialSession: chat.session,
@@ -28,7 +35,24 @@ export function Chat({
       if (session) onUpdate({ session })
     },
     onFinish: (snapshot) => onUpdate({ events: snapshot.events, session: snapshot.session }),
+    onError: (error) => {
+      const text = pending.current
+      if (text && !restarting.current && isSessionEnded(error)) {
+        restarting.current = true
+        setTimeout(() => continueFresh.current(text), 0)
+      }
+    },
   })
+  continueFresh.current = (text) => {
+    const history = transcript(latest.current.messages)
+    agent.reset()
+    setNotice(`服务器上的会话已结束（通常是服务重启），已在新会话中继续，带入之前的 ${history.length} 条文字消息。查询结果和产物需要重新生成。`)
+    void agent
+      .send(text, { clientContext: { ...(latest.current.model ? { model: latest.current.model } : {}), history } })
+      .finally(() => {
+        restarting.current = false
+      })
+  }
   const [showEvents, setShowEvents] = useState(false)
   const busy = agent.status === 'submitted' || agent.status === 'streaming'
   const messages = agent.data.messages
@@ -68,8 +92,10 @@ export function Chat({
 
   const model = chat.model ?? models?.default
   const answeredBy = modelsByTurn(agent.events)
+  latest.current = { messages, model }
   const send = (text: string) => {
     if (messages.length === 0) onUpdate({ title: text.slice(0, 28) })
+    pending.current = text
     // The agent's eve channel turns this into the turn's model (apps/agent/agent/channels/eve.ts).
     void agent.send(text, {
       ...(model ? { clientContext: { model } } : {}),
@@ -132,7 +158,10 @@ export function Chat({
                   onAnswer={(answers) => void agent.respond(answers)}
                 />
               ))}
-              {agent.error && (
+              {notice && (
+                <p className="border-t border-dashed border-line pt-3 text-center text-xs text-faint">{notice}</p>
+              )}
+              {agent.error && !restarting.current && !isSessionEnded(agent.error) && (
                 <div className="flex items-start gap-2.5 rounded-xl border border-danger/40 bg-danger-soft px-4 py-3 text-sm text-danger">
                   <AlertCircle className="mt-0.5 size-4 shrink-0" />
                   <div className="min-w-0 flex-1 break-words">{agent.error.message}</div>
@@ -244,4 +273,39 @@ function modelsByTurn(events: readonly { type: string; data?: unknown }[]): Map<
     if (typeof data?.turnId === 'string' && id) out.set(data.turnId, id.replace(/^bailian[./:]/, ''))
   }
   return out
+}
+
+/** 409 session_not_active / session_stranded: the server will never run this session again. */
+function isSessionEnded(error: unknown): boolean {
+  for (let e: unknown = error, depth = 0; e && depth < 4; e = (e as { cause?: unknown }).cause, depth++) {
+    const { status, body, code, message } = e as { status?: unknown; body?: unknown; code?: unknown; message?: unknown }
+    const text = [body, code, message].filter((v) => typeof v === 'string').join(' ')
+    if (/session_not_active|session_stranded/.test(text)) return true
+    if (status === 409 && /no longer active|stranded/i.test(text)) return true
+  }
+  return false
+}
+
+/**
+ * The conversation as plain text for a new session's `history`: what each side said, plus one
+ * line per query result and artifact so the model knows what was done. Failed sends are left out.
+ */
+function transcript(messages: readonly EveMessage[]): { role: 'user' | 'assistant'; text: string }[] {
+  const out: { role: 'user' | 'assistant'; text: string }[] = []
+  for (const message of messages) {
+    if (message.metadata?.optimistic || message.metadata?.status === 'failed') continue
+    const lines: string[] = []
+    for (const part of message.parts) {
+      if (part.type === 'text' && part.text.trim()) lines.push(part.text.trim())
+      if (part.type === 'dynamic-tool' && part.state === 'output-available') {
+        const o = part.output as { kind?: string; purpose?: string; title?: string; rowCount?: number } | undefined
+        if (o?.kind === 'table') lines.push(`[已查询：${o.purpose}，${o.rowCount} 行]`)
+        if (o?.kind === 'artifact') lines.push(`[已生成产物：${o.title}（在旧会话中，需要时重新生成）]`)
+      }
+    }
+    if (lines.length && (message.role === 'user' || message.role === 'assistant')) {
+      out.push({ role: message.role, text: lines.join('\n') })
+    }
+  }
+  return out.slice(-40)
 }
