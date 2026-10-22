@@ -203,10 +203,16 @@ Most of this phase was built as the 0.4 preview (merged to `main` 2026-10-22). S
 - **1.4 CLI.** Remaining: `pnpm cdb sql "<SELECT …>"`, `pnpm cdb find --desc … --kw …` → CSV.
 - **1.5 `apps/web`.** Done: chat on `useEveAgent` with tool cards, result tables, CSV
   downloads, artifact side panel, model picker, stop/steer, recovery when a session ended.
-- **1.6 Chats on the server.** New. Saved chats live in the browser's localStorage (one
-  conversation is ~900 events, so it fills after tens of chats, and chats do not follow the
-  user to another browser). Keep the chat list and each chat's session cursor on the agent,
-  and render history by replaying the session stream.
+- **1.6 Chats on the server.** Done. The chat list lives on the agent
+  (`OUTPUT_DIR/chats.json`, `GET /chats`, `PUT`/`DELETE /chats/:id`, same auth): per chat a
+  title, the chosen model and its eve session ids, oldest first. The web UI renders a chat by
+  reading each session's recorded stream (`snapshot()`, i.e. `follow=false`, which also works
+  for dormant and stranded sessions) and resumes the last one from its tail. A chat whose
+  session ended continues in a new session, so earlier sessions render read-only above it, with
+  their tool cards; the new session's imported text history is hidden as a duplicate. Chats
+  saved in a browser's localStorage are moved to the server on first load. One shared login, so
+  one shared list; per-user lists come with per-user auth. A session past eve's stream
+  retention (`410 session_expired`) shows as "no longer kept".
 - **1.7 Artifacts in a build.** Done. ECharts is vendored into the agent bundle on install
   (`scripts/vendor-libs.mjs`). Verified from a copy of `.output` outside the repo, in
   production mode with basic auth: a new artifact rendered with ECharts. The same run found the

@@ -1,11 +1,11 @@
-import { MessageSquarePlus, Trash2 } from 'lucide-react'
+import { AlertCircle, Loader2, MessageSquarePlus, Trash2 } from 'lucide-react'
 import { useChats } from './chats.ts'
 import { Chat } from './components/Chat.tsx'
 import { relativeTime } from './format.ts'
 import { modelLabel, useModels } from './models.ts'
 
 export function App() {
-  const { chats, active, select, create, update, remove } = useChats()
+  const { chats, active, error, select, create, update, remove } = useChats()
   const models = useModels()
 
   return (
@@ -36,10 +36,10 @@ export function App() {
         </div>
         <nav className="mt-4 flex-1 space-y-0.5 overflow-y-auto px-2">
           <p className="px-2 pb-1 text-[11px] font-medium tracking-wide text-faint">最近</p>
-          {chats.map((chat) => (
+          {chats?.map((chat) => (
             <div
               key={chat.id}
-              className={`group flex items-center rounded-lg ${chat.id === active.id ? 'bg-surface shadow-[0_0_0_1px_var(--c-border)]' : 'hover:bg-surface/70'}`}
+              className={`group flex items-center rounded-lg ${chat.id === active?.id ? 'bg-surface shadow-[0_0_0_1px_var(--c-border)]' : 'hover:bg-surface/70'}`}
             >
               <button
                 type="button"
@@ -49,7 +49,7 @@ export function App() {
                 <span className="block truncate text-[13px]">{chat.title}</span>
                 <span className="block text-[11px] text-faint">{relativeTime(chat.updatedAt)}</span>
               </button>
-              {chat.session && (
+              {chat.sessions.length > 0 && (
                 <button
                   type="button"
                   onClick={() => remove(chat.id)}
@@ -67,12 +67,28 @@ export function App() {
         </div>
       </aside>
       <main className="flex min-w-0 flex-1 bg-bg">
-        <Chat
-          key={active.id}
-          chat={active}
-          models={models}
-          onUpdate={(patch) => update(active.id, patch)}
-        />
+        {active ? (
+          <Chat
+            key={active.id}
+            chat={active}
+            models={models}
+            onUpdate={(patch) => update(active.id, patch)}
+          />
+        ) : (
+          <div className="flex flex-1 items-center justify-center gap-2 text-sm text-faint">
+            {error ? (
+              <>
+                <AlertCircle className="size-4 text-danger" />
+                对话列表载入失败：{error}
+              </>
+            ) : (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                载入对话列表…
+              </>
+            )}
+          </div>
+        )}
       </main>
     </div>
   )

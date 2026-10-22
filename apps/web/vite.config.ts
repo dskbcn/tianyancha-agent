@@ -17,6 +17,7 @@ export default defineConfig({
       '/files': { target: AGENT, changeOrigin: true },
       '/artifacts': { target: AGENT, changeOrigin: true },
       '/models': { target: AGENT, changeOrigin: true },
+      '/chats': { target: AGENT, changeOrigin: true },
     },
   },
 })

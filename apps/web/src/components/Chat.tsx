@@ -1,5 +1,5 @@
 import { openConversationInputs, useEveAgent, type EveMessage } from 'eve/react'
-import { Activity, AlertCircle, PanelRight, RotateCcw } from 'lucide-react'
+import { Activity, AlertCircle, Loader2, PanelRight, RotateCcw } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ArtifactPanelContext,
@@ -9,7 +9,16 @@ import {
   type PanelTarget,
 } from '../artifacts.ts'
 import type { EveDynamicToolPart } from 'eve/react'
-import type { SavedChat } from '../chats.ts'
+import type { ChatPatch, SavedChat } from '../chats.ts'
+import {
+  EMPTY_HISTORY,
+  isSettled,
+  loadHistory,
+  modelsByTurn,
+  toPast,
+  type ChatHistory,
+  type PastMessage,
+} from '../history.ts'
 import { modelLabel, type ModelCatalog } from '../models.ts'
 import { ArtifactPanel } from './ArtifactPanel.tsx'
 import { Composer } from './Composer.tsx'
@@ -17,32 +26,68 @@ import { EmptyState } from './EmptyState.tsx'
 import { EventsPanel } from './EventsPanel.tsx'
 import { InputRequestCard, MessageView } from './MessageView.tsx'
 
-/** One conversation. Remounted per chat (`key`), since useEveAgent reads its options once. */
-export function Chat({
-  chat,
-  onUpdate,
-  models,
-}: {
+interface ChatProps {
   chat: SavedChat
-  onUpdate: (patch: Partial<SavedChat>) => void
+  onUpdate: (patch: ChatPatch) => void
   models: ModelCatalog | null
-}) {
+}
+
+/**
+ * One conversation. Remounted per chat (`key`): it reads the chat's sessions back from the agent
+ * once, then mounts the live view, since useEveAgent reads its options once.
+ */
+export function Chat(props: ChatProps) {
+  const [sessions] = useState(props.chat.sessions)
+  const [history, setHistory] = useState<ChatHistory | null>(
+    sessions.length === 0 ? EMPTY_HISTORY : null,
+  )
+  useEffect(() => {
+    if (sessions.length === 0) return
+    let live = true
+    void loadHistory(sessions).then((h) => live && setHistory(h))
+    return () => {
+      live = false
+    }
+  }, [sessions])
+  if (!history) {
+    return (
+      <div className="flex flex-1 items-center justify-center gap-2 text-sm text-faint">
+        <Loader2 className="size-4 animate-spin" />
+        载入对话…
+      </div>
+    )
+  }
+  return <ChatView {...props} history={history} />
+}
+
+function ChatView({ chat, onUpdate, models, history }: ChatProps & { history: ChatHistory }) {
+  // Earlier sessions of this chat, read-only above the live one.
+  const [earlier, setEarlier] = useState<PastMessage[]>(history.earlier)
+  const [hideImported, setHideImported] = useState(history.hideImported)
   // When the server no longer has this chat's session (dev restart, redeploy), the next send
   // fails with 409 session_not_active. Start a new session that carries the conversation as text.
+  const sessionId = useRef(history.live?.session.sessionId)
   const pending = useRef<string | null>(null)
   const restarting = useRef(false)
-  const latest = useRef<{ messages: readonly EveMessage[]; model?: string }>({ messages: [] })
+  const latest = useRef<{
+    messages: readonly EveMessage[]
+    earlier: PastMessage[]
+    answeredBy: Map<string, string>
+    model?: string
+  }>({ messages: [], earlier: [], answeredBy: new Map() })
   const continueFresh = useRef<(text: string) => void>(() => {})
-  const [notice, setNotice] = useState<string | null>(null)
   const [recovering, setRecovering] = useState(false)
   const agent = useEveAgent({
-    initialEvents: chat.events ?? [],
-    initialSession: chat.session,
-    resume: chat.session !== undefined,
+    initialEvents: history.live?.events ?? [],
+    initialSession: history.live?.session,
+    resume: history.live !== undefined,
+    // The cursor moves with every event; the chat record needs only a new session id.
     onSessionChange: (session) => {
-      if (session) onUpdate({ session })
+      if (session && session.sessionId !== sessionId.current) {
+        sessionId.current = session.sessionId
+        onUpdate({ sessionId: session.sessionId })
+      }
     },
-    onFinish: (snapshot) => onUpdate({ events: snapshot.events, session: snapshot.session }),
     onError: (error) => {
       const text = pending.current
       if (text && !restarting.current && isSessionEnded(error)) {
@@ -55,18 +100,17 @@ export function Chat({
   // Callbacks above run outside render; keep what they read current after each render.
   useEffect(() => {
     continueFresh.current = (text) => {
-      const history = transcript(latest.current.messages)
+      const { messages, answeredBy, model } = latest.current
+      const past = [
+        ...latest.current.earlier,
+        ...toPast(messages, answeredBy, sessionId.current ?? 'old', false),
+      ]
+      const carried = transcript(past.map((p) => p.message))
+      setEarlier(past)
+      setHideImported(true)
       agent.reset()
-      setNotice(
-        `服务器上的会话已结束（通常是服务重启），已在新会话中继续，带入之前的 ${history.length} 条文字消息。查询结果和产物需要重新生成。`,
-      )
       void agent
-        .send(text, {
-          clientContext: {
-            ...(latest.current.model ? { model: latest.current.model } : {}),
-            history,
-          },
-        })
+        .send(text, { clientContext: { ...(model ? { model } : {}), history: carried } })
         .finally(() => {
           restarting.current = false
           setRecovering(false)
@@ -75,7 +119,11 @@ export function Chat({
   })
   const [showEvents, setShowEvents] = useState(false)
   const busy = agent.status === 'submitted' || agent.status === 'streaming'
-  const messages = agent.data.messages
+  const all = agent.data.messages
+  const messages = useMemo(
+    () => (hideImported ? all.filter((m) => !m.metadata?.imported) : all),
+    [all, hideImported],
+  )
   const inputs = openConversationInputs(agent.data)
   const running = runningTool(messages)
   const stopped = !busy && lastTurnOutcome(agent.events) === 'turn.cancelled'
@@ -83,9 +131,12 @@ export function Chat({
   // Artifacts. The panel follows the newest draft, or the newest version made since this chat
   // opened (keyed by its tool call, so a finished draft keeps its place), unless the user picked
   // or closed something since that draft or version appeared.
-  const artifacts = useMemo(() => collectArtifacts(messages), [messages])
+  const artifacts = useMemo(
+    () => collectArtifacts([...earlier.map((p) => p.message), ...messages]),
+    [earlier, messages],
+  )
   const drafts = draftParts(messages)
-  const [openedWith] = useState(() => new Set(artifactCallIds(collectArtifacts(messages))))
+  const [openedWith] = useState(() => new Set(artifactCallIds(artifacts)))
   const follow = autoTarget(drafts, artifacts, openedWith)
   const [choice, setChoice] = useState<{ key: string | null; target: PanelTarget | null } | null>(
     null,
@@ -103,10 +154,12 @@ export function Chat({
   const model = chat.model ?? models?.default
   const answeredBy = modelsByTurn(agent.events)
   useEffect(() => {
-    latest.current = { messages, model }
+    latest.current = { messages, earlier, answeredBy, model }
   })
   const send = (text: string) => {
-    if (messages.length === 0) onUpdate({ title: text.slice(0, 28) })
+    // Every message counts as activity, which orders the chat list.
+    const first = messages.length === 0 && earlier.length === 0 && chat.sessions.length === 0
+    onUpdate(first ? { title: text.slice(0, 28) } : {})
     pending.current = text
     // The agent's eve channel turns this into the turn's model (apps/agent/agent/channels/eve.ts).
     void agent.send(text, {
@@ -149,10 +202,33 @@ export function Chat({
             }}
             className="flex flex-1 flex-col overflow-y-auto"
           >
-            {messages.length === 0 && agent.status !== 'resuming' ? (
+            {messages.length === 0 &&
+            earlier.length === 0 &&
+            history.lost === 0 &&
+            agent.status !== 'resuming' ? (
               <EmptyState onPick={send} />
             ) : (
               <div className="mx-auto w-full max-w-3xl space-y-7 px-5 py-8">
+                {history.lost > 0 && (
+                  <p className="text-center text-xs text-faint">
+                    {earlier.length > 0 || history.live
+                      ? '这段对话较早部分的记录服务器已不再保存，无法显示。'
+                      : '这段对话的记录服务器已不再保存，无法显示。可以继续提问，将在新会话中进行。'}
+                  </p>
+                )}
+                {earlier.map(({ key, message, model: answered }) => (
+                  <div key={key}>
+                    <MessageView message={message} streaming={false} />
+                    {answered && (
+                      <p className="mt-2 text-[11px] text-faint">{modelLabel(models, answered)}</p>
+                    )}
+                  </div>
+                ))}
+                {earlier.length > 0 && (messages.length > 0 || recovering) && (
+                  <p className="border-t border-dashed border-line pt-3 text-center text-xs text-faint">
+                    服务器上的会话在这里结束（通常是服务重启），之后在新会话中继续：模型带着之前的文字内容，查询结果和产物需要重新生成。
+                  </p>
+                )}
                 {messages.map((message, i) => (
                   <div key={message.id}>
                     <MessageView message={message} streaming={busy && i === messages.length - 1} />
@@ -174,11 +250,6 @@ export function Chat({
                     onAnswer={(answers) => void agent.respond(answers)}
                   />
                 ))}
-                {notice && (
-                  <p className="border-t border-dashed border-line pt-3 text-center text-xs text-faint">
-                    {notice}
-                  </p>
-                )}
                 {agent.error && !recovering && !isSessionEnded(agent.error) && (
                   <div className="flex items-start gap-2.5 rounded-xl border border-danger/40 bg-danger-soft px-4 py-3 text-sm text-danger">
                     <AlertCircle className="mt-0.5 size-4 shrink-0" />
@@ -289,26 +360,6 @@ function lastTurnOutcome(events: readonly { type: string }[]): string | undefine
   return undefined
 }
 
-/** turnId → the model that served its last step, from step.started events (eve reports `modelId`). */
-function modelsByTurn(events: readonly { type: string; data?: unknown }[]): Map<string, string> {
-  const out = new Map<string, string>()
-  for (const event of events) {
-    if (event.type !== 'step.started') continue
-    const data = event.data as
-      | { turnId?: unknown; modelId?: unknown; model?: { id?: unknown } }
-      | undefined
-    const id =
-      typeof data?.modelId === 'string'
-        ? data.modelId
-        : typeof data?.model?.id === 'string'
-          ? data.model.id
-          : undefined
-    if (typeof data?.turnId === 'string' && id)
-      out.set(data.turnId, id.replace(/^bailian[./:]/, ''))
-  }
-  return out
-}
-
 /**
  * The server will not run this session again: 409 session_not_active / session_stranded, or, from
  * `eve dev` without --resume, a dormant run, which fails as a bare 500 "Failed to send the session
@@ -343,7 +394,7 @@ function transcript(
 ): { role: 'user' | 'assistant'; text: string }[] {
   const out: { role: 'user' | 'assistant'; text: string }[] = []
   for (const message of messages) {
-    if (message.metadata?.optimistic || message.metadata?.status === 'failed') continue
+    if (!isSettled(message)) continue
     const lines: string[] = []
     for (const part of message.parts) {
       if (part.type === 'text' && part.text.trim()) lines.push(part.text.trim())
