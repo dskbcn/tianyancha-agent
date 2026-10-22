@@ -21,6 +21,9 @@ services:
       PORT: '3000'
       OUTPUT_DIR: /app/output
       WEB_DIR: /app/web
+      # Log and file times in China time. Node reads it on its own; tzdata in the image (from
+      # beta.2) makes shell tools such as `date` in the container agree.
+      TZ: Asia/Shanghai
     ports:
       - target: 3000
         published: ${AGENT_PORT:-22030}

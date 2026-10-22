@@ -29,6 +29,8 @@ RUN pnpm --filter @tianyancha-agent/web build && pnpm --filter @tianyancha-agent
 # ---- run ------------------------------------------------------------------
 FROM node:24-alpine AS runner
 WORKDIR /app
+# Time zone data, so TZ (docker-compose.yml: Asia/Shanghai) applies to shell tools too.
+RUN apk add --no-cache tzdata
 ENV NODE_ENV=production \
     PORT=3000 \
     WEB_DIR=/app/web \
