@@ -1,0 +1,12 @@
+**/node_modules
+**/.eve
+**/.output
+**/dist
+**/*.tsbuildinfo
+apps/agent/agent/lib/vendor
+output
+.env*
+!.env.example
+.git
+.scratch
+**/.DS_Store

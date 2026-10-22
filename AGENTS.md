@@ -36,10 +36,13 @@ docs/plans/, docs/spikes/
   Libraries are served from our side (`<script src="lib:echarts">`), never a CDN.
 - **`packages/*` stay framework-free.** oxlint enforces it (`.oxlintrc.json`). Apps adapt
   packages, never the other way round.
-- **One auth policy.** The eve channel uses `routePolicy()` from `apps/agent/agent/lib/auth.ts`.
-  Custom routes start with `const refused = await denied(request); if (refused) return refused`.
-  eve's `routeAuth` _returns_ its 401 instead of throwing, so awaiting it alone protects nothing
-  (that shipped once; caught in a production build).
+- **One auth policy.** Logins come from `AGENT_USERS`; everything goes through
+  `apps/agent/agent/lib/auth.ts`. The eve channel uses `sessionPolicy()`. Custom routes start with
+  `const refused = await denied(request, sessionId?); if (refused) return refused`, or
+  `authenticate()` when they need the caller. Pass the session a route serves: eve does not scope
+  sessions to callers, so `denied` refuses a session another login's chat holds. eve's
+  `routeAuth` _returns_ its 401 instead of throwing, so awaiting it alone protects nothing (that
+  shipped once; caught in a production build).
 - **Models are an allowlist.** `apps/agent/agent/lib/models.ts`; the eve channel accepts a model
   from `clientContext.model` only if listed. Bailian needs `maxOutputTokens` set (its default is
   8,192, too short for artifacts).
@@ -79,6 +82,7 @@ Run from the repo root.
 | `pnpm typecheck`                    | `tsc --noEmit` in every package                                      |
 | `pnpm test`                         | Vitest in every package                                              |
 | `pnpm check:agent`                  | eve discovery: fails on a broken skill, tool or channel file         |
+| `docker compose up -d --build`      | Beta deployment: one container on `AGENT_PORT` (README "Deploy")     |
 
 Before saying a change is done: `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test &&
 pnpm check:agent`. For agent or UI behaviour, also run it: `pnpm dev`, then a real question in

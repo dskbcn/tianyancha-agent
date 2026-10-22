@@ -1,0 +1,32 @@
+# Beta deployment: one container on one port, no proxy. Settings come from .env next to this
+# file (copy .env.example; AGENT_USERS holds the testers' logins). Later, Dokploy's Traefik can
+# route a domain with TLS to the same container.
+#
+#   docker compose up -d --build
+#   open http://<server-ip>:${AGENT_PORT:-8080}/
+services:
+  agent:
+    build:
+      context: .
+      args:
+        ALIYUN_BAILIAN_CONTEXT_WINDOW: ${ALIYUN_BAILIAN_CONTEXT_WINDOW:-129024}
+    image: tianyancha-agent
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # Fixed by the image layout; whatever .env says for local development does not apply.
+      NODE_ENV: production
+      PORT: '3000'
+      OUTPUT_DIR: /app/output
+      WEB_DIR: /app/web
+    ports:
+      - '${AGENT_PORT:-8080}:3000'
+    volumes:
+      # Sessions. Without it, every chat's session ends on redeploy.
+      - workflow-data:/app/.eve
+      # Result CSVs, artifacts, and the chat list.
+      - output:/app/output
+
+volumes:
+  workflow-data:
+  output:

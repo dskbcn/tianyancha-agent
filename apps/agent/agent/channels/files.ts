@@ -5,13 +5,13 @@ import { denied } from '#lib/auth.ts'
 import { outputRoot, safe } from '#lib/db.ts'
 
 /**
- * Downloads for the CSV files tools write under OUTPUT_DIR/<sessionId>/, behind the same auth
- * as the chat. Names are re-sanitised, so a path can never leave the output directory.
+ * Downloads for the CSV files tools write under OUTPUT_DIR/<sessionId>/, for the login whose chat
+ * holds the session. Names are re-sanitised, so a path can never leave the output directory.
  */
 export default defineChannel({
   routes: [
     GET('/files/:sessionId/:name', async (request, { params }) => {
-      const refused = await denied(request)
+      const refused = await denied(request, decodeURIComponent(params.sessionId))
       if (refused) return refused
       const name = decodeURIComponent(params.name)
       if (!name.endsWith('.csv') || safe(name.slice(0, -4)) !== name.slice(0, -4)) {

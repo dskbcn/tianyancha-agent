@@ -235,10 +235,21 @@ Most of this phase was built as the 0.4 preview (merged to `main` 2026-10-22). S
 
 ### Phase 3: ship
 
-- **3.1 Channels.** eve HTTP channel + MCP channel with one basic-auth route policy (weixin's
-  `lib/auth.ts`).
-- **3.2 Image.** `apps/agent/Dockerfile` built from the repo root (the web build copied in for
-  Caddy to serve), compose + Caddy, volumes for `.eve` workflow state and `OUTPUT_DIR`.
+Revised 2026-10-22 for a beta on the internal network (`ip:port`), with one login per tester;
+later Dokploy (Traefik) in front for a domain and TLS. No Caddy: the agent serves the web UI.
+
+- **3.1 Logins.** Done. `AGENT_USERS` (`name:password`, comma-separated) gives each tester a
+  basic-auth login; the username is the principal id. eve's route auth does not scope sessions
+  to callers, so `lib/auth.ts` does: a session belongs to the login whose chat recorded it
+  (`chats.json`), and the eve session routes, `/files`, `/artifacts` and `/chats` refuse other
+  logins (403). A session no chat holds yet is open, since the browser records it right after
+  eve creates it, and its id is unguessable. Verified in the container with two logins. MCP
+  channel: not needed for the beta.
+- **3.2 Image.** Done. Root `Dockerfile` (web build + `eve build`, Nitro output only at runtime)
+  and `docker-compose.yml`: one container, port `AGENT_PORT` (8080), volumes for `.eve` and
+  `OUTPUT_DIR`. `channels/home.ts` serves the web build from `WEB_DIR` behind the same logins.
+  Verified: a real question, two logins kept apart, and a chat that survives a container
+  restart. README "Deploy (beta)".
 - **3.3 Release.** Tag `v<version>` → build, smoke-check `/eve/v1/health`, push to
   `registry.cn-hangzhou.aliyuncs.com/dskb/tianyancha-agent` (as face-platform).
 

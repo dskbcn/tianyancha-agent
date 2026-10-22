@@ -12,7 +12,7 @@ import { denied } from '#lib/auth.ts'
 export default defineChannel({
   routes: [
     GET('/artifacts/:sessionId/:id/:version', async (request, { params }) => {
-      const refused = await denied(request)
+      const refused = await denied(request, decodeURIComponent(params.sessionId))
       if (refused) return refused
       const version = Number(params.version)
       if (!Number.isInteger(version) || version < 1)

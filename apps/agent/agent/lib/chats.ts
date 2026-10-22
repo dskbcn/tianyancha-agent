@@ -5,9 +5,15 @@ import { z } from 'zod'
 /**
  * The web UI's chat list. A chat is a title and the eve sessions it ran in; the conversation
  * itself is read back from those sessions' streams, so a record stays a few hundred bytes.
+ *
+ * Each chat belongs to the login that created it, and so do its sessions: eve's route auth does
+ * not scope sessions to a caller, so lib/auth.ts asks `mayUse` before a session route, a result
+ * file or an artifact is served.
  */
 export interface ChatRecord {
   id: string
+  /** The principal id of the login that created the chat; unset on chats made before logins. */
+  owner?: string
   title: string
   createdAt: number
   updatedAt: number
@@ -38,6 +44,11 @@ export const chatPatch = z
 
 export type ChatPatch = z.infer<typeof chatPatch>
 
+export type PutResult =
+  | { ok: true; chat: ChatRecord }
+  /** `chat`: another login's chat. `session`: the session is in another login's chat. */
+  | { ok: false; reason: 'chat' | 'session' }
+
 /** One JSON file, rewritten atomically. Writes are serialised; the agent is a single process. */
 export class ChatStore {
   private chats: Map<string, ChatRecord> | undefined
@@ -45,22 +56,32 @@ export class ChatStore {
 
   constructor(private readonly file: string) {}
 
-  /** Newest first. */
-  list(): Promise<ChatRecord[]> {
+  /** The owner's chats, newest first. */
+  list(owner: string): Promise<ChatRecord[]> {
     return this.serial(async () =>
-      [...(await this.load()).values()].sort((a, b) => b.updatedAt - a.updatedAt),
+      [...(await this.load()).values()]
+        .filter((c) => mine(c, owner))
+        .sort((a, b) => b.updatedAt - a.updatedAt),
     )
   }
 
-  /** Creates the chat on first use. Every write counts as activity unless it says otherwise. */
-  put(id: string, patch: ChatPatch, now = Date.now()): Promise<ChatRecord> {
+  /**
+   * Creates the chat on first use; a chat from before logins becomes the caller's. Every write
+   * counts as activity unless it says otherwise.
+   */
+  put(owner: string, id: string, patch: ChatPatch, now = Date.now()): Promise<PutResult> {
     return this.serial(async () => {
       const chats = await this.load()
       const old = chats.get(id)
+      if (old && !mine(old, owner)) return { ok: false, reason: 'chat' }
+      if (patch.sessionId && holder(chats, patch.sessionId, owner)) {
+        return { ok: false, reason: 'session' }
+      }
       const chat: ChatRecord = old
-        ? { ...old, sessions: [...old.sessions] }
+        ? { ...old, owner, sessions: [...old.sessions] }
         : {
             id,
+            owner,
             title: '新对话',
             createdAt: Math.min(patch.createdAt ?? now, now),
             updatedAt: now,
@@ -75,17 +96,28 @@ export class ChatStore {
       chat.updatedAt = Math.min(patch.updatedAt ?? now, now)
       chats.set(id, chat)
       await this.save(chats)
-      return chat
+      return { ok: true, chat }
     })
   }
 
-  remove(id: string): Promise<boolean> {
+  remove(owner: string, id: string): Promise<boolean> {
     return this.serial(async () => {
       const chats = await this.load()
-      if (!chats.delete(id)) return false
+      const chat = chats.get(id)
+      if (!chat || !mine(chat, owner)) return false
+      chats.delete(id)
       await this.save(chats)
       return true
     })
+  }
+
+  /**
+   * Whether the caller may use a session: no other login's chat holds it. A session no chat holds
+   * yet is open, since the web UI records a new session only after eve has created it; its id is
+   * unguessable and known only to the browser that created it.
+   */
+  mayUse(owner: string, sessionId: string): Promise<boolean> {
+    return this.serial(async () => !holder(await this.load(), sessionId, owner))
   }
 
   private serial<T>(work: () => Promise<T>): Promise<T> {
@@ -118,4 +150,22 @@ export class ChatStore {
       throw error
     }
   }
+}
+
+function mine(chat: ChatRecord, owner: string): boolean {
+  return chat.owner === undefined || chat.owner === owner
+}
+
+/** Another login's chat that holds the session, if any. */
+function holder(
+  chats: Map<string, ChatRecord>,
+  sessionId: string,
+  owner: string,
+): ChatRecord | undefined {
+  for (const chat of chats.values()) {
+    if (chat.owner !== undefined && chat.owner !== owner && chat.sessions.includes(sessionId)) {
+      return chat
+    }
+  }
+  return undefined
 }

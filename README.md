@@ -31,6 +31,28 @@ Changes to channels (`/files`, `/artifacts` routes) or to `packages/*` need a re
 `pnpm dev:agent` / `pnpm dev:web` run one side; `pnpm --filter @tianyancha-agent/agent dev:tui`
 opens eve's terminal UI instead. CSV results land in `output/<sessionId>/`.
 
+## Deploy (beta)
+
+One container on one port: the agent serves the API and the web UI's build, with no proxy in
+front. On the server, from a checkout of this repo, with Docker:
+
+```sh
+cp .env.example .env        # fill the two API keys and AGENT_USERS (one login per tester)
+docker compose up -d --build
+curl http://localhost:8080/eve/v1/health
+```
+
+Testers open `http://<server-ip>:8080/` and sign in with their login (the browser asks). Each
+login sees only its own chats, results and artifacts. `AGENT_PORT` in `.env` changes the port.
+
+- **Logins:** `AGENT_USERS=alice:pw1,bob:pw2`. Change the list and `docker compose up -d` (no
+  rebuild). A removed login's chats stay on disk but nobody can open them.
+- **Data:** two volumes, `workflow-data` (sessions: without it every chat's session ends on
+  redeploy) and `output` (CSVs, artifacts, `chats.json`). `docker compose down -v` deletes them.
+- **Update:** `git pull && docker compose up -d --build`. Running chats continue after the restart.
+- **Plain HTTP:** passwords cross the network unencrypted, so keep it on the internal network.
+  For a domain with TLS, put Dokploy (Traefik) in front of the same container on port 3000.
+
 ## Checks
 
 ```sh
