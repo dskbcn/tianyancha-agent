@@ -1,8 +1,8 @@
 # tianyancha-agent: 企业数据分析 agent plan
 
-Status: plan settled 2026-10-22 (open questions 1–4 answered); spikes 0.1–0.2 next.
-Started 2026-10-22. Data source facts below were measured against
-the live MCP server on 2026-10-22.
+Status: plan settled 2026-10-22 (open questions 1–4 answered); spikes 0.1–0.2 done
+(`docs/spikes/`), 0.3–0.4 next. Started 2026-10-22. Data source facts below were measured
+against the live MCP server on 2026-10-22.
 
 References: `~/Dev/weixin-article-agent` (eve agent shape: authored tools, skills, channels,
 auth, Docker + Caddy) and `~/Dev/face-platform` (monorepo conventions: pnpm
@@ -63,25 +63,32 @@ Tables:
 
 ### Coverage (measured)
 
-| City | Rows | `established_date` covered |
-|---|---|---|
-| 杭州市 | 2,954,006 | 2017-07 → now |
-| 深圳市 | 2,665,649 | 2020 → now |
+| City | Rows | `established_date` covered | Last update |
+|---|---|---|---|
+| 杭州市 | 2,954,006 | 2017-07-19 → 2026-09-30 | 2026-10-21 |
+| 深圳市 | 2,665,649 | 2020-01 → 2026-05-20 | 2026-06-24 |
 
-Status mix: 存续 4.14M, 注销 1.40M, 吊销 51k, other values under 25k each. So "how many
-companies are in 杭州" cannot be answered from this data. "How many were registered in 杭州
-since 2017-07" can.
+深圳 stopped updating in June, so a 杭州 vs 深圳 comparison uses the common window only.
+Coverage is read at runtime, not hard-coded (spike 0.2, finding 3).
+
+Status mix: 存续 4.14M, 注销 1.40M, 吊销 51k, other values under 25k each. 47% of rows are
+个体工商户. So "how many companies are in 杭州" cannot be answered from this data. "How many
+were registered in 杭州 since 2017-07, and how many of them are 个体工商户" can.
 
 ### Pitfalls the tools must handle
 
-- `established_date`, `approved_date` and `registered_capital` are TEXT. Date comparisons need
-  `::date`, or they silently compare strings.
-- `registered_capital` / `paid_in_capital` are strings with mixed units and currencies:
-  `30000万人民币`, `20万美元`, `10万欧元`, `10万港元`. Numeric comparison needs a parse
-  expression (spike 0.2), and cross-currency comparison needs a stated rate or a filter to RMB.
-- An unbounded `SELECT id, company_name FROM …` failed after ~8 s with an HTTP/2
-  `INTERNAL_ERROR`, and **the MCP session was dead afterwards**. The client must reconnect, and
-  every query must carry a `LIMIT`.
+- `query` returns at most 2,000 rows and reports `truncated: false` when it cut them. More rows
+  need paging (spike 0.1).
+- A query with neither SQL `LIMIT` nor the `limit` argument failed after ~8 s with an HTTP/2
+  `INTERNAL_ERROR`, and **the MCP session was dead afterwards**. Every call sends `limit`, and
+  the client reconnects once on a lost session.
+- Every scan over the table takes 13–17 s; `find_companies` takes 40–55 s.
+- Dates are TEXT but uniformly `YYYY-MM-DD`, so string comparison is correct. `date_trunc`
+  shifts results by the server's time zone; group by `LEFT(established_date, 7)` instead.
+- `registered_capital` is 31% empty and 99.8% `万人民币` otherwise, with 15 other units.
+  Capital analysis covers RMB values and says so. `paid_in_capital` is 93% empty.
+- Filter by `city`, not `province` (杭州 has both `浙江省` and `浙江`). `enterprise_type` has
+  full- and half-width bracket variants of the same type.
 - The join key is `company_id` on one table and `id` on the other.
 - Contact columns (`valid_mobile_phone`, `more_phones`, `email`, `other_email`) and
   `legal_representative` are personal data (see open question 1).
@@ -94,7 +101,7 @@ since 2017-07" can.
 | How the agent reaches the data | **Authored tools** over an MCP client in `packages/company-db`, not an eve `defineMcpClientConnection` | eve MCP connections have no `toModelOutput` and cannot force `limit`; one `query_table` call without a limit can return millions of rows into context |
 | MCP client | `@modelcontextprotocol/sdk` Streamable HTTP client with `X-API-Key`, one per process, reconnect once on session loss | The server kills the session on some errors |
 | Results | Full result → `OUTPUT_DIR/<session>/<n>-<slug>.csv` (UTF-8 BOM so Excel opens it); the model sees columns, row count, a 20-row preview, the path, warnings | weixin's rule: the filesystem holds data, the context holds summaries |
-| Row caps | `query`: LIMIT injected or clamped to `QUERY_ROW_CAP` (default 5,000). `find_companies`: pages until `FIND_ROW_CAP` (default 5,000) | The server cannot take unbounded reads (see Pitfalls) |
+| Row caps | `query`: the `limit` argument on every call (page = 2,000, the server's cap); keyset/`OFFSET` paging up to `QUERY_ROW_CAP` (default 10,000) in total. `find_companies`: one call with `limit = FIND_ROW_CAP` (default 5,000), paging only if `next_offset` is set | The server cannot take unbounded reads and hides its own truncation (spike 0.1) |
 | Model | Alibaba Cloud Bailian (百炼 / DashScope) OpenAI-compatible API through `@ai-sdk/openai-compatible`, unconditional provider in `agent.ts` (weixin's build-time rule applies); which Bailian model is picked by spike 0.3 | Owner's choice. SQL quality is measured, not assumed |
 | Personal data | Contact columns (`valid_mobile_phone`, `more_phones`, `email`, `other_email`) and `legal_representative` are stripped from model output and exports unless `EXPOSE_CONTACTS=true`. Enforced in `packages/company-db`, on the result rows, so free SQL cannot get around it | Owner's choice (open question 1) |
 | Web UI | `apps/web` from phase 1: static Vite app (React, TanStack Router, Tailwind 4 + shadcn/ui as face-platform's console) on `useEveAgent` from `eve/react`; Chinese UI | Owner's choice: non-technical users from v1 |
@@ -130,8 +137,8 @@ web UI can render a result's preview table and a download link from the same too
 | Tool | Wraps | Model sees |
 |---|---|---|
 | `company_schema` | `get_schema` (cached) + our notes | Compact dictionary: column, type, comment; coverage; pitfalls |
-| `company_sql` | `query` | Columns, row count, `truncated`, 20-row preview, CSV path, warnings (e.g. TEXT date compared without `::date`) |
-| `company_find` | `find_companies` (paged) | `keyword_hits`, `semantic_only`, `score_distribution`, top 20, CSV path |
+| `company_sql` | `query` | Columns, row count, `truncated` (ours, not the server's), 20-row preview, CSV path, warnings (non-ISO date literal, `date_trunc`, `province` filter) |
+| `company_find` | `find_companies` | `keyword_hits`, `semantic_only`, `score_distribution`, top 20, CSV path |
 | `company_profile` | `query_table` by USCC or name (`ilike`, ≤ 10 candidates) | One company's record, or the candidate list to choose from |
 | `company_similar` (phase 2) | `semantic_search` + join | Top-k companies like a description |
 | `read_output` | local files | Paged slice of a saved CSV/Markdown (`offset`/`limit`), confined to `OUTPUT_DIR` |
@@ -145,7 +152,8 @@ web UI can render a result's preview table and a download link from the same too
 - Every query carries a `LIMIT`; no code path sends an unbounded read.
 - Tool results stay under ~2k tokens. Anything larger goes to disk and is read back in slices.
 - Numbers in answers come from a tool result in this session, never from memory or estimates.
-  Each answer names the coverage window when it counts or compares.
+  Each answer names the coverage window when it counts or compares, and the 个体工商户 share
+  when it counts companies.
 - `packages/company-db` imports no `eve`, `ai` or framework code (ESLint enforces it).
 - Credentials come from the environment only.
 - Contact columns leave `packages/company-db` only when `EXPOSE_CONTACTS=true`.
@@ -154,10 +162,10 @@ web UI can render a result's preview table and a download link from the same too
 
 ### Phase 0: spikes (results in `docs/spikes/0.x-*.md`)
 
-- **0.1 Client.** SDK client with `X-API-Key`: session reuse, reconnect after the server drops
+- **0.1 Client.** Done: `docs/spikes/0.1-mcp-client.md`. SDK client with `X-API-Key`: session reuse, reconnect after the server drops
   a session, timeouts (`find_companies` takes tens of seconds), the server's row cap and payload
   size for `query`, behaviour under 2–4 concurrent calls.
-- **0.2 SQL surface.** Which functions the whitelist allows (`regexp_replace`, `date_trunc`,
+- **0.2 SQL surface.** Done: `docs/spikes/0.2-sql-surface.md`. Which functions the whitelist allows (`regexp_replace`, `date_trunc`,
   `CASE`, `FILTER`, window functions); a capital parse expression covering every unit and
   currency present; `established_date` formats; freshness per city (latest date per city,
   since 深圳 2026 looks low next to 杭州).
@@ -214,7 +222,7 @@ Charts rendered in the web UI, saved sessions list, report viewer.
 ```env
 COMPANY_DB_MCP_URL=https://h5.dskb.cn/zh/company/mcp/
 COMPANY_DB_API_KEY=                 # never commit
-QUERY_ROW_CAP=5000
+QUERY_ROW_CAP=10000
 FIND_ROW_CAP=5000
 OUTPUT_DIR=./output
 EXPOSE_CONTACTS=false
