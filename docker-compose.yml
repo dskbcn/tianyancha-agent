@@ -1,14 +1,19 @@
-# Beta deployment: one container on one port, no proxy, running the image pushed to the Aliyun
-# registry (README "Deploy (beta)"). Settings come from .env next to this file (copy
-# .env.example; AGENT_USERS holds the testers' logins, AGENT_TAG picks the image). Later,
-# Dokploy's Traefik can route a domain with TLS to the same container.
+# Beta deployment as a Docker Swarm stack (Dokploy "Stack", or docker stack deploy): one
+# container on one port, no proxy, running the image pushed to the Aliyun registry (README
+# "Deploy (beta)"). Settings come from .env next to this file (copy .env.example; AGENT_USERS
+# holds the testers' logins). Later, Dokploy's Traefik can route a domain with TLS to port 3000.
 #
-#   docker compose pull && docker compose up -d
-#   open http://<server-ip>:${AGENT_PORT:-8080}/
+#   docker stack deploy --with-registry-auth -c docker-compose.yml tianyancha-agent
+#   open http://<server-ip>:22030/
+#
+# State lives on the host, under DATA_DIR. Create the directories before the first deploy,
+# owned by the image's user (node, uid 1000): a bind mount fails on a missing directory.
+#
+#   mkdir -p /ssd_srv/apps/tianyancha-agent/{eve,output}
+#   chown -R 1000:1000 /ssd_srv/apps/tianyancha-agent
 services:
   agent:
     image: registry.cn-hangzhou.aliyuncs.com/dskb/tianyancha-agent:${AGENT_TAG:-beta.1}
-    restart: unless-stopped
     env_file: .env
     environment:
       # Fixed by the image layout; whatever .env says for local development does not apply.
@@ -17,13 +22,32 @@ services:
       OUTPUT_DIR: /app/output
       WEB_DIR: /app/web
     ports:
-      - '${AGENT_PORT:-8080}:3000'
+      - target: 3000
+        published: ${AGENT_PORT:-22030}
+        protocol: tcp
     volumes:
-      # Sessions. Without it, every chat's session ends on redeploy.
-      - workflow-data:/app/.eve
+      # Sessions. Without them, every chat's session ends on redeploy.
+      - type: bind
+        source: ${DATA_DIR:-/ssd_srv/apps/tianyancha-agent}/eve
+        target: /app/.eve
       # Result CSVs, artifacts, and the chat list.
-      - output:/app/output
-
-volumes:
-  workflow-data:
-  output:
+      - type: bind
+        source: ${DATA_DIR:-/ssd_srv/apps/tianyancha-agent}/output
+        target: /app/output
+    deploy:
+      # Exactly one: the chat list and eve's local workflow state are files one process owns.
+      replicas: 1
+      update_config:
+        # Stop the old task before starting the new one, so two never share the state.
+        order: stop-first
+        failure_action: rollback
+      rollback_config:
+        order: stop-first
+      restart_policy:
+        condition: any
+        delay: 5s
+      placement:
+        constraints:
+          # The data is on this host's disk. On a multi-node swarm, pin to that node instead:
+          # node.hostname == <host>
+          - node.role == manager

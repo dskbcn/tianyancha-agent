@@ -246,9 +246,9 @@ later Dokploy (Traefik) in front for a domain and TLS. No Caddy: the agent serve
   eve creates it, and its id is unguessable. Verified in the container with two logins. MCP
   channel: not needed for the beta.
 - **3.2 Image.** Done. Root `Dockerfile` (web build + `eve build`, Nitro output only at runtime)
-  and `docker-compose.yml`: one container running the registry image (`AGENT_TAG`, pushed by
-  hand with `docker buildx build --platform linux/amd64 --push`), port `AGENT_PORT` (8080),
-  volumes for `.eve` and `OUTPUT_DIR`. `channels/home.ts` serves the web build from `WEB_DIR` behind the same logins.
+  and `docker-compose.yml`, a Swarm stack for Dokploy: one replica of the registry image
+  (`AGENT_TAG`, pushed by hand with `docker buildx build --platform linux/amd64 --push`), port
+  22030, `.eve` and `OUTPUT_DIR` bind-mounted from `/ssd_srv/apps/tianyancha-agent`. `channels/home.ts` serves the web build from `WEB_DIR` behind the same logins.
   Verified: a real question, two logins kept apart, and a chat that survives a container
   restart. README "Deploy (beta)".
 - **3.3 Release.** Tag `v<version>` → build, smoke-check `/eve/v1/health`, push to

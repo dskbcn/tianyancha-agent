@@ -42,26 +42,41 @@ docker buildx build --platform linux/amd64 --push \
   -t registry.cn-hangzhou.aliyuncs.com/dskb/tianyancha-agent:beta.1 .
 ```
 
-On the server, next to `docker-compose.yml` and a `.env`, with Docker logged in to the registry:
+`docker-compose.yml` is a Docker Swarm stack (Dokploy "Stack"). On the server, create the data
+directories once, owned by the image's user (uid 1000); a bind mount fails on a missing one:
 
 ```sh
-cp .env.example .env        # the two API keys, AGENT_USERS (one login per tester), AGENT_TAG
-docker compose pull && docker compose up -d
-curl http://localhost:8080/eve/v1/health
+mkdir -p /ssd_srv/apps/tianyancha-agent/{eve,output}
+chown -R 1000:1000 /ssd_srv/apps/tianyancha-agent
 ```
 
-Testers open `http://<server-ip>:8080/` and sign in with their login (the browser asks). Each
-login sees only its own chats, results and artifacts. `AGENT_PORT` in `.env` changes the port.
+In Dokploy: a Compose service of type Stack from this repo, the `.env` contents in its
+Environment tab (the two API keys, `AGENT_USERS`), and the Aliyun registry under Registry so
+nodes can pull. By hand, next to `docker-compose.yml` and a `.env`, logged in to the registry:
 
-- **Logins:** `AGENT_USERS=alice:pw1,bob:pw2`. Change the list and `docker compose up -d` (no
-  rebuild). A removed login's chats stay on disk but nobody can open them.
-- **Data:** two volumes, `workflow-data` (sessions: without it every chat's session ends on
-  redeploy) and `output` (CSVs, artifacts, `chats.json`). `docker compose down -v` deletes them.
-- **Update:** push a new tag (`beta.2`), set `AGENT_TAG=beta.2` in `.env`, then
-  `docker compose pull && docker compose up -d`. Running chats continue after the restart. Roll
-  back by setting the previous tag.
+```sh
+docker stack deploy --with-registry-auth -c docker-compose.yml tianyancha-agent
+curl http://localhost:22030/eve/v1/health
+```
+
+Testers open `http://<server-ip>:22030/` and sign in with their login (the browser asks). Each
+login sees only its own chats, results and artifacts.
+
+- **Logins:** `AGENT_USERS=alice:pw1,13800138000:pw2` (`name:password`, comma-separated; a
+  password may contain `:` but not `,`). Change the list and redeploy. A removed login's chats
+  stay on disk but nobody can open them.
+- **Data:** `/ssd_srv/apps/tianyancha-agent/eve` (sessions: without it every chat's session ends
+  on redeploy) and `.../output` (CSVs, artifacts, `chats.json`). Back up that directory.
+- **Update:** push a new tag (`beta.2`), set `AGENT_TAG=beta.2`, redeploy. Swarm stops the old
+  task before starting the new one (one process owns the state) and rolls back if it fails.
+  Running chats continue after the restart.
+- **Variables in the file** (`AGENT_TAG`, `AGENT_PORT`, `DATA_DIR`) are read from the shell or
+  Dokploy's environment when the stack is deployed; `docker stack deploy` does not read `.env`
+  for them. Unset, they default to `beta.1`, `22030` and `/ssd_srv/apps/tianyancha-agent`.
+- **One replica, one node:** the state is files on that host's disk, so the stack runs one task
+  pinned to a manager node. On a multi-node swarm, pin it to the data's host instead.
 - **Plain HTTP:** passwords cross the network unencrypted, so keep it on the internal network.
-  For a domain with TLS, put Dokploy (Traefik) in front of the same container on port 3000.
+  For a domain with TLS, route Dokploy's Traefik to the service on port 3000.
 
 ## Checks
 
