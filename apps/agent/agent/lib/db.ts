@@ -36,6 +36,8 @@ export async function saveCsv(
   await mkdir(dir, { recursive: true })
   const name = `${safe(stem).slice(0, 40) || 'result'}-${safe(callId).slice(-6)}.csv`
   await writeFile(path.join(dir, name), toCsv(columns, rows))
+  // The same rows as JSON, for artifacts that load a result as window.DATA.
+  await writeFile(path.join(dir, name.replace(/\.csv$/, '.json')), JSON.stringify({ columns, rows }))
   return { name, url: `/files/${encodeURIComponent(safe(sessionId))}/${encodeURIComponent(name)}`, rows: rows.length }
 }
 

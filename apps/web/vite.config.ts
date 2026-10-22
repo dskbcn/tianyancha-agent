@@ -15,6 +15,7 @@ export default defineConfig({
     proxy: {
       '/eve': { target: AGENT, changeOrigin: true },
       '/files': { target: AGENT, changeOrigin: true },
+      '/artifacts': { target: AGENT, changeOrigin: true },
     },
   },
 })

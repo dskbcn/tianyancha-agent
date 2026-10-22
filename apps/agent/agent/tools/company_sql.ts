@@ -48,7 +48,8 @@ export default defineTool({
     if (output.kind === 'error') return { type: 'text', value: `查询失败：${output.error}` }
     const lines = [
       `${output.rowCount} 行${output.truncated ? '（达到 2000 行上限，可能被截断）' : ''}，用时 ${output.ms} ms。`,
-      output.rowCount > MODEL_ROWS ? `下面是前 ${MODEL_ROWS} 行；完整结果已存为 ${output.file?.name}，界面上有下载链接。` : '',
+      output.file ? `结果文件：${output.file.name}（做产物时在 data 里引用它）` : '',
+      output.rowCount > MODEL_ROWS ? `下面是前 ${MODEL_ROWS} 行；完整结果在结果文件里，界面上有下载链接。` : '',
       output.rowCount > 0 ? modelTable(output.columns, output.rows) : '无结果。',
       ...output.warnings.map((w) => `注意：${w}`),
     ]

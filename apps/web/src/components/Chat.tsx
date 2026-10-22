@@ -1,7 +1,9 @@
 import { openConversationInputs, useEveAgent, type EveMessage } from 'eve/react'
 import { Activity, AlertCircle, PanelRight, RotateCcw } from 'lucide-react'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { ArtifactPanelContext, collectArtifacts, draftParts, type PanelTarget } from '../artifacts.ts'
 import type { SavedChat } from '../chats.ts'
+import { ArtifactPanel } from './ArtifactPanel.tsx'
 import { Composer } from './Composer.tsx'
 import { EmptyState } from './EmptyState.tsx'
 import { EventsPanel } from './EventsPanel.tsx'
@@ -31,6 +33,36 @@ export function Chat({
   const running = runningTool(messages)
   const stopped = !busy && lastTurnOutcome(agent.events) === 'turn.cancelled'
 
+  // Artifacts: the panel follows a draft while it is written, then its finished version.
+  const artifacts = useMemo(() => collectArtifacts(messages), [messages])
+  const drafts = draftParts(messages)
+  const [panel, setPanel] = useState<PanelTarget | null>(null)
+  const seen = useRef(new Set<string>())
+  useEffect(() => {
+    for (const draft of drafts) {
+      if (seen.current.has(draft.toolCallId)) continue
+      seen.current.add(draft.toolCallId)
+      setPanel({ mode: 'draft', callId: draft.toolCallId })
+    }
+    for (const entry of artifacts.values()) {
+      for (const v of entry.versions) {
+        const key = `${entry.id}@${v.version}`
+        if (seen.current.has(key)) continue
+        seen.current.add(key)
+        // Saved chats re-render their history on load: open only versions made while watching.
+        if (busy) setPanel({ mode: 'artifact', id: entry.id, version: v.version })
+      }
+    }
+  })
+  const panelDraft = panel?.mode === 'draft' ? drafts.find((d) => d.toolCallId === panel.callId) : undefined
+  const panelArtifact = panel?.mode === 'artifact' ? artifacts.get(panel.id) : undefined
+  // A draft that finished becomes its artifact; one that failed closes.
+  useEffect(() => {
+    if (panel?.mode !== 'draft' || panelDraft) return
+    const done = [...artifacts.values()].find((a) => a.versions.some((v) => v.callId === panel.callId))
+    setPanel(done ? { mode: 'artifact', id: done.id } : null)
+  }, [panel, panelDraft, artifacts])
+
   const send = (text: string) => {
     if (messages.length === 0) onUpdate({ title: text.slice(0, 28) })
     void agent.send(text, busy ? { turnPolicy: 'steer' } : undefined)
@@ -45,6 +77,7 @@ export function Chat({
   })
 
   return (
+    <ArtifactPanelContext.Provider value={{ open: setPanel }}>
     <div className="flex min-w-0 flex-1">
       <div className="flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center gap-3 border-b border-line px-5">
@@ -120,10 +153,21 @@ export function Chat({
           </p>
         </div>
       </div>
+      {(panelDraft || panelArtifact) && (
+        <ArtifactPanel
+          artifact={panelArtifact}
+          version={panel?.mode === 'artifact' ? panel.version : undefined}
+          draft={panelDraft}
+          onVersion={(version) => panelArtifact && setPanel({ mode: 'artifact', id: panelArtifact.id, version })}
+          onClose={() => setPanel(null)}
+          onFix={busy ? undefined : send}
+        />
+      )}
       {showEvents && (
         <EventsPanel events={agent.events} sessionId={agent.session?.sessionId} onClose={() => setShowEvents(false)} />
       )}
     </div>
+    </ArtifactPanelContext.Provider>
   )
 }
 

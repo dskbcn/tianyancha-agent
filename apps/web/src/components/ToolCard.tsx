@@ -14,7 +14,9 @@ import {
   X,
 } from 'lucide-react'
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { ARTIFACT_TOOLS } from '../artifacts.ts'
 import { cellText, COLUMN_LABELS, seconds } from '../format.ts'
+import { ArtifactCard } from './ArtifactCard.tsx'
 import { DataTable } from './DataTable.tsx'
 
 /** What the agent's tools return (apps/agent/agent/tools); the UI gets the full output. */
@@ -64,6 +66,8 @@ export function ToolCard({ part }: { part: EveDynamicToolPart }) {
   // Collapsed by default: the answer is the main read. Errors open so the message is visible.
   const [open, setOpen] = useState<boolean | undefined>(undefined)
   const isOpen = open ?? failed
+
+  if (ARTIFACT_TOOLS.has(part.toolName)) return <ArtifactCard part={part} />
 
   if (part.toolName === 'eve__skill') {
     const name = (part.toolMetadata?.eve as { name?: string } | undefined)?.name

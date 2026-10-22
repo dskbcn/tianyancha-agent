@@ -69,7 +69,8 @@ export default defineTool({
       output.rowCount > 0
         ? `以下分布基于返回的 ${output.rowCount} 家${output.truncated ? '（未取完，用 minScore 收窄后再统计）' : ''}：\n${breakdownText(output.breakdown)}`
         : '',
-      output.rowCount > 0 ? `完整名单已存为 ${output.file?.name}，界面上有下载链接。前 ${Math.min(MODEL_ROWS, output.rowCount)} 家：` : '',
+      output.file ? `结果文件：${output.file.name}（完整名单，界面上有下载链接；做产物时在 data 里引用它）` : '',
+      output.rowCount > 0 ? `前 ${Math.min(MODEL_ROWS, output.rowCount)} 家：` : '',
       output.rowCount > 0 ? modelTable(output.columns, output.rows) : '',
     ]
     return { type: 'text', value: lines.filter(Boolean).join('\n') }

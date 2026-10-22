@@ -1,0 +1,18 @@
+{
+  "name": "@tianyancha-agent/artifacts",
+  "private": true,
+  "description": "HTML artifacts: validate, apply edits, and prepare a sandboxed page with data and libraries. No eve imports.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

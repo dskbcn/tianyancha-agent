@@ -15,8 +15,10 @@
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "3.0.75",
+    "@tianyancha-agent/artifacts": "workspace:*",
     "@tianyancha-agent/company-db": "workspace:*",
     "ai": "7.0.137",
+    "echarts": "6.1.0",
     "eve": "catalog:",
     "just-bash": "3.6.0",
     "zod": "catalog:"
