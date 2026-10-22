@@ -17,7 +17,9 @@ export function DataTable({
       <table className="w-full border-collapse text-[13px] tabular-nums">
         <thead className="sticky top-0 z-10 bg-sunken">
           <tr>
-            <th className="w-10 border-b border-line px-2 py-2 text-right font-normal text-faint">#</th>
+            <th className="w-10 border-b border-line px-2 py-2 text-right font-normal text-faint">
+              #
+            </th>
             {columns.map((c) => (
               <th
                 key={c}

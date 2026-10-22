@@ -46,9 +46,16 @@ function Part({ part, caret }: { part: EveMessagePart; caret: boolean }) {
       return (
         <div className="flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-sm">
           <KeyRound className="size-4 text-muted" />
-          {part.state === 'required' ? `需要授权：${part.displayName}` : `${part.displayName}：${part.outcome}`}
+          {part.state === 'required'
+            ? `需要授权：${part.displayName}`
+            : `${part.displayName}：${part.outcome}`}
           {part.state === 'required' && part.authorization?.url && (
-            <a className="ml-auto text-accent underline" href={part.authorization.url} target="_blank" rel="noreferrer">
+            <a
+              className="ml-auto text-accent underline"
+              href={part.authorization.url}
+              target="_blank"
+              rel="noreferrer"
+            >
               去授权
             </a>
           )}

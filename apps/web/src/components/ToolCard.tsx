@@ -13,7 +13,7 @@ import {
   Wrench,
   X,
 } from 'lucide-react'
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { ARTIFACT_TOOLS } from '../artifacts.ts'
 import { cellText, COLUMN_LABELS, seconds } from '../format.ts'
 import { ArtifactCard } from './ArtifactCard.tsx'
@@ -60,7 +60,8 @@ const ICONS: Record<string, typeof Database> = {
 export function ToolCard({ part }: { part: EveDynamicToolPart }) {
   const label = part.toolMetadata?.eve?.label ?? part.toolName
   const running = part.state === 'input-streaming' || part.state === 'input-available'
-  const output = part.state === 'output-available' && !part.partial ? (part.output as ToolOutput) : undefined
+  const output =
+    part.state === 'output-available' && !part.partial ? (part.output as ToolOutput) : undefined
   const failed = part.state === 'output-error' || output?.kind === 'error'
   const elapsed = useElapsed(running)
   // Collapsed by default: the answer is the main read. Errors open so the message is visible.
@@ -80,7 +81,12 @@ export function ToolCard({ part }: { part: EveDynamicToolPart }) {
   }
 
   const Icon = ICONS[part.toolName] ?? Wrench
-  const input = (part.input ?? {}) as { sql?: string; purpose?: string; keywords?: string[]; description?: string }
+  const input = (part.input ?? {}) as {
+    sql?: string
+    purpose?: string
+    keywords?: string[]
+    description?: string
+  }
   const sql = input.sql ?? (output && 'sql' in output ? output.sql : undefined)
 
   return (
@@ -147,12 +153,16 @@ function TableResult({ output }: { output: TableOutput }) {
     <>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted">
         <span>
-          <b className="font-semibold text-fg tabular-nums">{output.rowCount.toLocaleString('zh-CN')}</b> 行
+          <b className="font-semibold text-fg tabular-nums">
+            {output.rowCount.toLocaleString('zh-CN')}
+          </b>{' '}
+          行
         </span>
         <span>用时 {seconds(output.ms)}</span>
         {output.keywordHits !== undefined && (
           <span>
-            关键词候选 {output.keywordHits.toLocaleString('zh-CN')} · 语义补充 {output.semanticOnly?.toLocaleString('zh-CN')}
+            关键词候选 {output.keywordHits.toLocaleString('zh-CN')} · 语义补充{' '}
+            {output.semanticOnly?.toLocaleString('zh-CN')}
           </span>
         )}
         {output.truncated && <Badge tone="warn">已达上限，结果可能不完整</Badge>}
@@ -186,7 +196,8 @@ function TableResult({ output }: { output: TableOutput }) {
 
 function ProfileResult({ output }: { output: ProfileOutput }) {
   if (output.rowCount === 0) return <p className="text-sm text-muted">没有找到匹配的企业。</p>
-  if (output.rowCount > 1) return <DataTable columns={output.columns.slice(0, 8)} rows={output.rows} />
+  if (output.rowCount > 1)
+    return <DataTable columns={output.columns.slice(0, 8)} rows={output.rows} />
   const row = output.rows[0]!
   return (
     <dl className="grid grid-cols-[8rem_1fr] gap-x-4 gap-y-1.5 text-sm">
@@ -220,7 +231,10 @@ function ScoreBars({ distribution }: { distribution: Record<string, number> }) {
         {entries.map(([bucket, n]) => (
           <div key={bucket} className="flex items-center gap-2 text-xs tabular-nums">
             <span className="w-12 shrink-0 text-muted">{bucket}</span>
-            <span className="h-2 rounded-full bg-accent/70" style={{ width: `${(n / max) * 70}%` }} />
+            <span
+              className="h-2 rounded-full bg-accent/70"
+              style={{ width: `${(n / max) * 70}%` }}
+            />
             <span>{n.toLocaleString('zh-CN')}</span>
           </div>
         ))}
@@ -263,19 +277,20 @@ function ErrorBox({ text }: { text?: string }) {
 
 function Badge({ tone, children }: { tone: 'warn'; children: ReactNode }) {
   return (
-    <span className={`rounded-md px-1.5 py-0.5 ${tone === 'warn' ? 'bg-warn-soft text-warn' : ''}`}>{children}</span>
+    <span className={`rounded-md px-1.5 py-0.5 ${tone === 'warn' ? 'bg-warn-soft text-warn' : ''}`}>
+      {children}
+    </span>
   )
 }
 
-/** Milliseconds since the component first saw `running`; parts carry no timestamps. */
+/** Milliseconds since this card mounted, ticking while `running`; parts carry no timestamps. */
 function useElapsed(running: boolean): number {
-  const start = useRef<number | null>(null)
-  const [now, setNow] = useState(() => Date.now())
-  if (running && start.current === null) start.current = Date.now()
+  const [mountedAt] = useState(() => Date.now())
+  const [now, setNow] = useState(mountedAt)
   useEffect(() => {
     if (!running) return
     const timer = setInterval(() => setNow(Date.now()), 100)
     return () => clearInterval(timer)
   }, [running])
-  return start.current === null ? 0 : Math.max(0, now - start.current)
+  return running ? Math.max(0, now - mountedAt) : 0
 }

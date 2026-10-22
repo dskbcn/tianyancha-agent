@@ -1,5 +1,14 @@
 import type { EveDynamicToolPart } from 'eve/react'
-import { AlertTriangle, Download, FileCode2, LayoutDashboard, Loader2, PanelRightOpen, Presentation, ScrollText } from 'lucide-react'
+import {
+  AlertTriangle,
+  Download,
+  FileCode2,
+  LayoutDashboard,
+  Loader2,
+  PanelRightOpen,
+  Presentation,
+  ScrollText,
+} from 'lucide-react'
 import { isArtifactOutput, partialHtml, useArtifactPanel } from '../artifacts.ts'
 
 const KIND_ICON: Record<string, typeof FileCode2> = {
@@ -19,7 +28,12 @@ const KIND_LABEL: Record<string, string> = {
 /** The chat-side face of artifact_publish / artifact_edit / artifact_read. */
 export function ArtifactCard({ part }: { part: EveDynamicToolPart }) {
   const { open } = useArtifactPanel()
-  const input = (part.input ?? {}) as { title?: string; kind?: string; id?: string; edits?: unknown[] }
+  const input = (part.input ?? {}) as {
+    title?: string
+    kind?: string
+    id?: string
+    edits?: unknown[]
+  }
 
   if (part.toolName === 'artifact_read') {
     return <p className="text-xs text-muted">读取产物源码{input.id ? ` · ${input.id}` : ''}</p>
@@ -27,7 +41,8 @@ export function ArtifactCard({ part }: { part: EveDynamicToolPart }) {
 
   const writing = part.state === 'input-streaming' || part.state === 'input-available'
   if (writing) {
-    const chars = part.state === 'input-streaming' ? (partialHtml(part.inputText)?.length ?? 0) : null
+    const chars =
+      part.state === 'input-streaming' ? (partialHtml(part.inputText)?.length ?? 0) : null
     return (
       <button
         type="button"
@@ -37,7 +52,9 @@ export function ArtifactCard({ part }: { part: EveDynamicToolPart }) {
         <Loader2 className="size-4 shrink-0 animate-spin text-accent" />
         <span className="min-w-0 flex-1">
           <span className="block truncate text-sm font-medium">
-            {part.toolName === 'artifact_edit' ? `修改产物（${input.edits?.length ?? '…'} 处）` : (input.title ?? '正在生成产物')}
+            {part.toolName === 'artifact_edit'
+              ? `修改产物（${input.edits?.length ?? '…'} 处）`
+              : (input.title ?? '正在生成产物')}
           </span>
           <span className="block text-xs text-muted">
             {part.toolName === 'artifact_edit'
@@ -47,7 +64,9 @@ export function ArtifactCard({ part }: { part: EveDynamicToolPart }) {
                 : '校验并保存中…'}
           </span>
         </span>
-        {part.toolName === 'artifact_publish' && <PanelRightOpen className="size-4 shrink-0 text-muted" />}
+        {part.toolName === 'artifact_publish' && (
+          <PanelRightOpen className="size-4 shrink-0 text-muted" />
+        )}
       </button>
     )
   }
@@ -57,7 +76,7 @@ export function ArtifactCard({ part }: { part: EveDynamicToolPart }) {
     const error =
       part.state === 'output-error'
         ? part.errorText
-        : (output as { error?: string } | undefined)?.error ?? '产物未生成'
+        : ((output as { error?: string } | undefined)?.error ?? '产物未生成')
     return (
       <div className="flex gap-2.5 rounded-xl border border-danger/40 bg-danger-soft/50 px-3.5 py-2.5 text-xs text-danger">
         <AlertTriangle className="mt-0.5 size-3.5 shrink-0" />
@@ -83,7 +102,8 @@ export function ArtifactCard({ part }: { part: EveDynamicToolPart }) {
         <span className="min-w-0">
           <span className="block truncate text-sm font-medium">{output.title}</span>
           <span className="block text-xs text-muted">
-            {KIND_LABEL[output.artifactKind] ?? output.artifactKind} · v{output.version} · {Math.max(1, Math.round(output.bytes / 1024))} KB
+            {KIND_LABEL[output.artifactKind] ?? output.artifactKind} · v{output.version} ·{' '}
+            {Math.max(1, Math.round(output.bytes / 1024))} KB
           </span>
         </span>
       </button>

@@ -22,23 +22,35 @@ describe('lintSql', () => {
 
 describe('toCsv', () => {
   it('writes a BOM, quotes where needed, and leaves nulls empty', () => {
-    const csv = toCsv(['a', 'b'], [{ a: '含,逗号', b: null }, { a: 'say "hi"', b: 2 }])
+    const csv = toCsv(
+      ['a', 'b'],
+      [
+        { a: '含,逗号', b: null },
+        { a: 'say "hi"', b: 2 },
+      ],
+    )
     expect(csv).toBe('﻿a,b\r\n"含,逗号",\r\n"say ""hi""",2\r\n')
   })
 })
 
 describe('rejectSql', () => {
   it('rejects a doubled paren after FILTER, as the model wrote it', () => {
-    expect(rejectSql("SELECT COUNT(*) FILTER ((WHERE company_name LIKE '%AI%')) FROM t")).toMatch(/FILTER/)
+    expect(rejectSql("SELECT COUNT(*) FILTER ((WHERE company_name LIKE '%AI%')) FROM t")).toMatch(
+      /FILTER/,
+    )
   })
 
   it('accepts FILTER with grouping inside WHERE', () => {
-    expect(rejectSql("SELECT COUNT(*) FILTER (WHERE (a LIKE '%x%' OR b LIKE '%y%') AND c = 1) FROM t")).toBeUndefined()
+    expect(
+      rejectSql("SELECT COUNT(*) FILTER (WHERE (a LIKE '%x%' OR b LIKE '%y%') AND c = 1) FROM t"),
+    ).toBeUndefined()
   })
 })
 
 describe('cleanError', () => {
   it('strips terminal escape codes from server messages', () => {
-    expect(cleanError('COUNT(*) FILTER ((\x1b[4mWHERE\x1b[0m company_name')).toBe('COUNT(*) FILTER ((WHERE company_name')
+    expect(cleanError('COUNT(*) FILTER ((\x1b[4mWHERE\x1b[0m company_name')).toBe(
+      'COUNT(*) FILTER ((WHERE company_name',
+    )
   })
 })

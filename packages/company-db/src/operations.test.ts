@@ -13,7 +13,9 @@ describe('lookupCompany', () => {
     const db = stubDb({
       table: 'tyc_advanced_search_companies',
       row_count: 1,
-      rows: [{ id: 3732676, company_name: '浙江都快传媒集团有限公司', established_date: '2020-06-11' }],
+      rows: [
+        { id: 3732676, company_name: '浙江都快传媒集团有限公司', established_date: '2020-06-11' },
+      ],
     })
     const result = await lookupCompany(db, { name: '都快传媒' }, {})
     expect(result.rowCount).toBe(1)

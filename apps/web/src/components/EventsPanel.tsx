@@ -26,7 +26,12 @@ export function EventsPanel({
           <p className="truncate font-mono text-[11px] text-faint">{sessionId ?? '尚未创建会话'}</p>
         </div>
         <span className="text-xs text-muted tabular-nums">{events.length}</span>
-        <button type="button" onClick={onClose} className="rounded-md p-1 text-muted hover:bg-sunken" aria-label="关闭">
+        <button
+          type="button"
+          onClick={onClose}
+          className="rounded-md p-1 text-muted hover:bg-sunken"
+          aria-label="关闭"
+        >
           <X className="size-4" />
         </button>
       </header>

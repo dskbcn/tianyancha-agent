@@ -31,7 +31,10 @@ function store(chats: SavedChat[]): void {
     // Quota or private mode: drop stored events of older chats and keep the cursors, which
     // are enough to resume from the server.
     try {
-      localStorage.setItem(KEY, JSON.stringify(chats.map((c, i) => (i < 3 ? c : { ...c, events: undefined }))))
+      localStorage.setItem(
+        KEY,
+        JSON.stringify(chats.map((c, i) => (i < 3 ? c : { ...c, events: undefined }))),
+      )
     } catch {
       /* the page still works without persistence */
     }

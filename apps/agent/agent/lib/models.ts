@@ -24,7 +24,10 @@ export function modelCatalog() {
   if (!ids.includes(DEFAULT_MODEL)) ids.unshift(DEFAULT_MODEL)
   return {
     default: DEFAULT_MODEL,
-    models: ids.map((id) => ({ id, ...(DESCRIBED[id] ?? { label: id, note: '', evaluated: false }) })),
+    models: ids.map((id) => ({
+      id,
+      ...(DESCRIBED[id] ?? { label: id, note: '', evaluated: false }),
+    })),
   }
 }
 

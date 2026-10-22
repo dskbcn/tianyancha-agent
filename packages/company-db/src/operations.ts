@@ -34,7 +34,11 @@ export async function runSql(
   const warnings = lintSql(sql)
   const pageSize = Math.min(limit, SERVER_ROW_CAP)
   const started = performance.now()
-  const result = (await db.call('query', { sql, limit: pageSize }, { signal: options.signal })) as ServerTable
+  const result = (await db.call(
+    'query',
+    { sql, limit: pageSize },
+    { signal: options.signal },
+  )) as ServerTable
   return finish(result, pageSize, warnings, started)
 }
 

@@ -14,7 +14,12 @@ export function App() {
         <div className="flex h-14 items-center gap-2.5 px-4">
           <span className="flex size-7 items-center justify-center rounded-lg bg-accent text-accent-fg">
             <svg viewBox="0 0 32 32" className="size-4" aria-hidden>
-              <path d="M9 22V14M16 22V9M23 22v-5" stroke="currentColor" strokeWidth="3.5" strokeLinecap="round" />
+              <path
+                d="M9 22V14M16 22V9M23 22v-5"
+                stroke="currentColor"
+                strokeWidth="3.5"
+                strokeLinecap="round"
+              />
             </svg>
           </span>
           <span className="text-sm font-semibold">企业数据分析</span>
@@ -62,7 +67,12 @@ export function App() {
         </div>
       </aside>
       <main className="flex min-w-0 flex-1 bg-bg">
-        <Chat key={active.id} chat={active} models={models} onUpdate={(patch) => update(active.id, patch)} />
+        <Chat
+          key={active.id}
+          chat={active}
+          models={models}
+          onUpdate={(patch) => update(active.id, patch)}
+        />
       </main>
     </div>
   )

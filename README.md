@@ -8,12 +8,12 @@
 
 ## Workspace
 
-| Package | What |
-|---|---|
-| [`apps/agent`](apps/agent) | eve agent: instructions, `company-analysis` skill, tools, eve + files channels |
-| [`apps/web`](apps/web) | Web chat (Vite, React 19, Tailwind 4) on `useEveAgent` |
-| [`packages/company-db`](packages/company-db) | MCP client, guards, CSV. No eve imports |
-| [`packages/artifacts`](packages/artifacts) | HTML artifacts: validate (incl. script syntax), edits, sandboxed page with data and ECharts |
+| Package                                      | What                                                                                        |
+| -------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| [`apps/agent`](apps/agent)                   | eve agent: instructions, `company-analysis` skill, tools, eve + files channels              |
+| [`apps/web`](apps/web)                       | Web chat (Vite, React 19, Tailwind 4) on `useEveAgent`                                      |
+| [`packages/company-db`](packages/company-db) | MCP client, guards, CSV. No eve imports                                                     |
+| [`packages/artifacts`](packages/artifacts)   | HTML artifacts: validate (incl. script syntax), edits, sandboxed page with data and ECharts |
 
 ## Run it
 
@@ -34,10 +34,10 @@ opens eve's terminal UI instead. CSV results land in `output/<sessionId>/`.
 ## Checks
 
 ```sh
-pnpm typecheck
-pnpm test
-pnpm --filter @tianyancha-agent/agent exec eve info   # agent discovery: must say "0 errors"
+pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm check:agent
 ```
+
+CI (`.github/workflows/ci.yml`) runs the same. Conventions for people and agents: [`AGENTS.md`](AGENTS.md).
 
 Skill files are YAML front matter plus Markdown: quote a `description` that contains `: `, or
 discovery fails and `pnpm dev` stops.

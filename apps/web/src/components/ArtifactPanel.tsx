@@ -27,27 +27,39 @@ export function ArtifactPanel({
   const frame = useRef<HTMLIFrameElement>(null)
   const current = artifact?.versions.find((v) => v.version === version) ?? artifact?.versions.at(-1)
   // The page's error reporter (packages/artifacts prepare) posts here; only trust our own frame.
-  const [error, setError] = useState<string | null>(null)
-  useEffect(() => setError(null), [current?.url])
+  // Kept with the page it came from, so switching versions shows only that version's error.
+  const [reported, setReported] = useState<{ url: string; message: string } | null>(null)
+  const error = reported && reported.url === current?.url ? reported.message : null
   useEffect(() => {
     const listen = (event: MessageEvent) => {
-      if (event.source !== frame.current?.contentWindow) return
+      const url = frame.current?.getAttribute('src')
+      if (!url || event.source !== frame.current?.contentWindow) return
       const data = event.data as { type?: unknown; message?: unknown }
-      if (data?.type === 'artifact-error' && typeof data.message === 'string') setError((e) => e ?? data.message as string)
+      if (data?.type === 'artifact-error' && typeof data.message === 'string') {
+        const message = data.message
+        setReported((r) => (r?.url === url ? r : { url, message }))
+      }
     }
     addEventListener('message', listen)
     return () => removeEventListener('message', listen)
   }, [])
-  const draftHtml = useThrottled(draft?.state === 'input-streaming' ? partialHtml(draft.inputText) : null, 1200)
+  const draftHtml = useThrottled(
+    draft?.state === 'input-streaming' ? partialHtml(draft.inputText) : null,
+    1200,
+  )
   const draftTitle = (draft?.input as { title?: string } | undefined)?.title
 
   return (
     <aside className="flex w-[min(52vw,56rem)] min-w-[24rem] shrink-0 flex-col border-l border-line bg-surface">
       <header className="flex h-14 shrink-0 items-center gap-2 border-b border-line px-4">
         <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{draft ? (draftTitle ?? '正在生成产物') : current?.title}</p>
+          <p className="truncate text-sm font-medium">
+            {draft ? (draftTitle ?? '正在生成产物') : current?.title}
+          </p>
           <p className="text-[11px] text-faint">
-            {draft ? '草稿预览 · 脚本和图表在完成后显示' : `${current?.artifactKind} · ${Math.max(1, Math.round((current?.bytes ?? 0) / 1024))} KB`}
+            {draft
+              ? '草稿预览 · 脚本和图表在完成后显示'
+              : `${current?.artifactKind} · ${Math.max(1, Math.round((current?.bytes ?? 0) / 1024))} KB`}
           </p>
         </div>
         {!draft && artifact && artifact.versions.length > 1 && (
@@ -69,10 +81,23 @@ export function ArtifactPanel({
             <IconButton label="全屏" onClick={() => void frame.current?.requestFullscreen?.()}>
               <Maximize2 className="size-4" />
             </IconButton>
-            <a href={current.url} target="_blank" rel="noreferrer" className={iconButton} title="新窗口打开" aria-label="新窗口打开">
+            <a
+              href={current.url}
+              target="_blank"
+              rel="noreferrer"
+              className={iconButton}
+              title="新窗口打开"
+              aria-label="新窗口打开"
+            >
               <ExternalLink className="size-4" />
             </a>
-            <a href={current.downloadUrl} download className={iconButton} title="下载 HTML" aria-label="下载 HTML">
+            <a
+              href={current.downloadUrl}
+              download
+              className={iconButton}
+              title="下载 HTML"
+              aria-label="下载 HTML"
+            >
               <Download className="size-4" />
             </a>
           </>
@@ -91,7 +116,9 @@ export function ArtifactPanel({
             <button
               type="button"
               onClick={() =>
-                onFix(`产物「${current.title}」（id ${current.id}，v${current.version}）在浏览器里运行出错：${error}。请用 artifact_read 查看后用 artifact_edit 修复。`)
+                onFix(
+                  `产物「${current.title}」（id ${current.id}，v${current.version}）在浏览器里运行出错：${error}。请用 artifact_read 查看后用 artifact_edit 修复。`,
+                )
               }
               className="flex shrink-0 items-center gap-1 rounded-md bg-danger px-2 py-1 font-medium text-white"
             >
@@ -105,7 +132,12 @@ export function ArtifactPanel({
         {draft ? (
           <>
             {draftHtml ? (
-              <iframe title="产物草稿" sandbox="" srcDoc={draftDocument(draftHtml)} className="size-full border-0 bg-white" />
+              <iframe
+                title="产物草稿"
+                sandbox=""
+                srcDoc={draftDocument(draftHtml)}
+                className="size-full border-0 bg-white"
+              />
             ) : (
               <div className="flex size-full items-center justify-center gap-2 text-sm text-muted">
                 <Loader2 className="size-4 animate-spin" />
@@ -137,7 +169,15 @@ export function ArtifactPanel({
 
 const iconButton = 'rounded-md p-1.5 text-muted hover:bg-sunken hover:text-fg'
 
-function IconButton({ label, onClick, children }: { label: string; onClick: () => void; children: React.ReactNode }) {
+function IconButton({
+  label,
+  onClick,
+  children,
+}: {
+  label: string
+  onClick: () => void
+  children: React.ReactNode
+}) {
   return (
     <button type="button" onClick={onClick} className={iconButton} title={label} aria-label={label}>
       {children}

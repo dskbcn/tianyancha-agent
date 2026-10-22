@@ -24,13 +24,19 @@ function dir(sessionId: string, id?: string): string {
 
 export async function readMeta(sessionId: string, id: string): Promise<ArtifactMeta | null> {
   try {
-    return JSON.parse(await readFile(path.join(dir(sessionId, id), 'meta.json'), 'utf8')) as ArtifactMeta
+    return JSON.parse(
+      await readFile(path.join(dir(sessionId, id), 'meta.json'), 'utf8'),
+    ) as ArtifactMeta
   } catch {
     return null
   }
 }
 
-export async function readVersion(sessionId: string, id: string, version: number): Promise<string | null> {
+export async function readVersion(
+  sessionId: string,
+  id: string,
+  version: number,
+): Promise<string | null> {
   try {
     return await readFile(path.join(dir(sessionId, id), `v${version}.html`), 'utf8')
   } catch {
@@ -53,7 +59,10 @@ export async function saveVersion(
     id: meta.id,
     title: meta.title,
     kind: meta.kind,
-    versions: [...versions, { version, createdAt: new Date().toISOString(), bytes: Buffer.byteLength(html), data }],
+    versions: [
+      ...versions,
+      { version, createdAt: new Date().toISOString(), bytes: Buffer.byteLength(html), data },
+    ],
   }
   await writeFile(path.join(target, 'meta.json'), JSON.stringify(next, null, 2))
   return next
@@ -74,12 +83,17 @@ export async function availableData(sessionId: string): Promise<string[]> {
 }
 
 /** Loads `alias → result file` as `alias → { columns, rows }`; throws naming what is missing. */
-export async function loadData(sessionId: string, refs: Record<string, string>): Promise<Record<string, DataTable>> {
+export async function loadData(
+  sessionId: string,
+  refs: Record<string, string>,
+): Promise<Record<string, DataTable>> {
   const out: Record<string, DataTable> = {}
   for (const [alias, file] of Object.entries(refs)) {
     const json = path.basename(file).replace(/\.csv$/, '') + '.json'
     try {
-      out[alias] = JSON.parse(await readFile(path.join(outputRoot(), safe(sessionId), json), 'utf8')) as DataTable
+      out[alias] = JSON.parse(
+        await readFile(path.join(outputRoot(), safe(sessionId), json), 'utf8'),
+      ) as DataTable
     } catch {
       const known = await availableData(sessionId)
       throw new Error(
@@ -107,13 +121,22 @@ async function librarySources(names: Iterable<Library>): Promise<Partial<Record<
 }
 
 /** The page as the browser gets it: with DATA and inlined libraries. */
-export async function preparedPage(sessionId: string, id: string, version: number): Promise<{ html: string; meta: ArtifactMeta } | null> {
+export async function preparedPage(
+  sessionId: string,
+  id: string,
+  version: number,
+): Promise<{ html: string; meta: ArtifactMeta } | null> {
   const meta = await readMeta(sessionId, id)
   const entry = meta?.versions.find((v) => v.version === version)
   const raw = await readVersion(sessionId, id, version)
   if (!meta || !entry || raw === null) return null
-  const libraries = [...raw.matchAll(/src\s*=\s*["']?lib:([a-z0-9-]+)/gi)].map((m) => m[1] as Library)
-  const html = prepare(raw, { data: await loadData(sessionId, entry.data), libraries: await librarySources(libraries) })
+  const libraries = [...raw.matchAll(/src\s*=\s*["']?lib:([a-z0-9-]+)/gi)].map(
+    (m) => m[1] as Library,
+  )
+  const html = prepare(raw, {
+    data: await loadData(sessionId, entry.data),
+    libraries: await librarySources(libraries),
+  })
   return { html, meta }
 }
 
@@ -126,7 +149,11 @@ export function artifactUrls(sessionId: string, id: string, version: number) {
  * A page that reads DATA must declare where it comes from. Without this the model writes a
  * hand-copied fallback dataset, which nothing checks (seen 2026-10-22).
  */
-export async function missingData(sessionId: string, html: string, refs: Record<string, string>): Promise<string | null> {
+export async function missingData(
+  sessionId: string,
+  html: string,
+  refs: Record<string, string>,
+): Promise<string | null> {
   if (Object.keys(refs).length > 0 || !/\bDATA\b/.test(html)) return null
   const known = await availableData(sessionId)
   return (

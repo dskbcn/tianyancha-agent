@@ -12,7 +12,9 @@ export default defineTool({
   inputSchema: z.object({
     description: z
       .string()
-      .describe('一句话描述目标企业的业务，越具体越好，例如"从事人工智能技术研发与应用的公司，包括机器学习、计算机视觉、大模型"'),
+      .describe(
+        '一句话描述目标企业的业务，越具体越好，例如"从事人工智能技术研发与应用的公司，包括机器学习、计算机视觉、大模型"',
+      ),
     keywords: z
       .array(z.string())
       .min(1)
@@ -20,7 +22,9 @@ export default defineTool({
     filters: z
       .record(z.string(), z.unknown())
       .optional()
-      .describe('结构化条件，写法同 query_table，如 {"city":"杭州市","established_date":{"op":"gte","value":"2025-10-22"}}'),
+      .describe(
+        '结构化条件，写法同 query_table，如 {"city":"杭州市","established_date":{"op":"gte","value":"2025-10-22"}}',
+      ),
     minScore: z.number().min(0).max(1).optional().describe('相似度下限 0–1'),
   }),
   async execute(input, ctx) {
@@ -33,7 +37,13 @@ export default defineTool({
       )
       const file =
         result.rowCount > 0
-          ? await saveCsv(ctx.session.id, ctx.callId, input.description, result.columns, result.rows)
+          ? await saveCsv(
+              ctx.session.id,
+              ctx.callId,
+              input.description,
+              result.columns,
+              result.rows,
+            )
           : null
       return {
         kind: 'table' as const,
@@ -52,14 +62,17 @@ export default defineTool({
         file,
       }
     } catch (error) {
-      if (error instanceof CompanyDbError) return { kind: 'error' as const, purpose: input.description, error: error.message }
+      if (error instanceof CompanyDbError)
+        return { kind: 'error' as const, purpose: input.description, error: error.message }
       throw error
     }
   },
   label: {
     start: ({ description }) => `查找企业：${description.slice(0, 30)}`,
     complete: (_input, output) =>
-      'error' in output ? '查找企业（失败）' : `找到 ${output.rowCount} 家企业，${(output.ms / 1000).toFixed(0)} 秒`,
+      'error' in output
+        ? '查找企业（失败）'
+        : `找到 ${output.rowCount} 家企业，${(output.ms / 1000).toFixed(0)} 秒`,
   },
   toModelOutput(output) {
     if (output.kind === 'error') return { type: 'text', value: `查找失败：${output.error}` }
@@ -69,7 +82,9 @@ export default defineTool({
       output.rowCount > 0
         ? `以下分布基于返回的 ${output.rowCount} 家${output.truncated ? '（未取完，用 minScore 收窄后再统计）' : ''}：\n${breakdownText(output.breakdown)}`
         : '',
-      output.file ? `结果文件：${output.file.name}（完整名单，界面上有下载链接；做产物时在 data 里引用它）` : '',
+      output.file
+        ? `结果文件：${output.file.name}（完整名单，界面上有下载链接；做产物时在 data 里引用它）`
+        : '',
       output.rowCount > 0 ? `前 ${Math.min(MODEL_ROWS, output.rowCount)} 家：` : '',
       output.rowCount > 0 ? modelTable(output.columns, output.rows) : '',
     ]

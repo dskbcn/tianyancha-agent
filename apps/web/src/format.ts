@@ -22,7 +22,8 @@ export function cellText(value: unknown, column?: string): string {
   if (column && /(^id$|_id$|code$|number$)/.test(column)) return String(value)
   if (typeof value === 'number') return value.toLocaleString('zh-CN')
   // Five digits and up: counts sent as text. Four-digit strings are usually years ('2020').
-  if (typeof value === 'string' && /^-?\d{5,}$/.test(value)) return Number(value).toLocaleString('zh-CN')
+  if (typeof value === 'string' && /^-?\d{5,}$/.test(value))
+    return Number(value).toLocaleString('zh-CN')
   if (typeof value === 'object') return JSON.stringify(value)
   return String(value)
 }

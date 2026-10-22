@@ -1,5 +1,5 @@
 ---
-description: "Use before artifact_publish / artifact_edit — making HTML artifacts from query results (charts, dashboards, infographics, slide decks, reports): data wiring, sandbox rules, ECharts, layout and per-kind guidance."
+description: 'Use before artifact_publish / artifact_edit — making HTML artifacts from query results (charts, dashboards, infographics, slide decks, reports): data wiring, sandbox rules, ECharts, layout and per-kind guidance.'
 ---
 
 # 做 HTML 产物
@@ -19,9 +19,9 @@ description: "Use before artifact_publish / artifact_edit — making HTML artifa
 `window.DATA.<别名>` 的形状是 `{ columns: string[], rows: object[] }`，和查询结果一模一样。
 
 ```js
-const { rows } = DATA.monthly            // [{ m: "2026-01", n: 38413, companies: 15210 }, …]
-const months = rows.map(r => r.m)
-const total = rows.reduce((s, r) => s + Number(r.n), 0)   // 合计、占比、排名都在页面里由 DATA 计算
+const { rows } = DATA.monthly // [{ m: "2026-01", n: 38413, companies: 15210 }, …]
+const months = rows.map((r) => r.m)
+const total = rows.reduce((s, r) => s + Number(r.n), 0) // 合计、占比、排名都在页面里由 DATA 计算
 ```
 
 - **`data` 必填**：页面上出现的每个业务数字都来自 `data` 引用的结果文件（查询工具返回里的"结果文件"）。
@@ -58,9 +58,9 @@ const total = rows.reduce((s, r) => s + Number(r.n), 0)   // 合计、占比、�
   chart.setOption({
     tooltip: { trigger: 'axis' },
     grid: { left: 48, right: 16, top: 32, bottom: 32, containLabel: true },
-    xAxis: { type: 'category', data: rows.map(r => r.m) },
+    xAxis: { type: 'category', data: rows.map((r) => r.m) },
     yAxis: { type: 'value' },
-    series: [{ type: 'line', data: rows.map(r => Number(r.n)) }],   // 不要 smooth：曲线会越过真实值
+    series: [{ type: 'line', data: rows.map((r) => Number(r.n)) }], // 不要 smooth：曲线会越过真实值
   })
   addEventListener('resize', () => chart.resize())
 </script>
@@ -81,20 +81,76 @@ const total = rows.reduce((s, r) => s + Number(r.n), 0)   // 合计、占比、�
 
 ```html
 <style>
-  html,body{margin:0;height:100%;background:#111}
-  .deck{position:relative;width:100vw;height:100vh;display:grid;place-items:center}
-  .slide{display:none;width:min(100vw,177.78vh);height:min(56.25vw,100vh);box-sizing:border-box;padding:5% 6%;background:var(--bg,#fff);color:var(--fg,#111)}
-  .slide.active{display:flex;flex-direction:column}
-  .pager{position:fixed;right:16px;bottom:12px;font:12px sans-serif;color:#888}
-  @media print{html,body{background:#fff}.slide{display:flex!important;page-break-after:always;width:100%;height:100vh}.pager{display:none}}
+  html,
+  body {
+    margin: 0;
+    height: 100%;
+    background: #111;
+  }
+  .deck {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    display: grid;
+    place-items: center;
+  }
+  .slide {
+    display: none;
+    width: min(100vw, 177.78vh);
+    height: min(56.25vw, 100vh);
+    box-sizing: border-box;
+    padding: 5% 6%;
+    background: var(--bg, #fff);
+    color: var(--fg, #111);
+  }
+  .slide.active {
+    display: flex;
+    flex-direction: column;
+  }
+  .pager {
+    position: fixed;
+    right: 16px;
+    bottom: 12px;
+    font: 12px sans-serif;
+    color: #888;
+  }
+  @media print {
+    html,
+    body {
+      background: #fff;
+    }
+    .slide {
+      display: flex !important;
+      page-break-after: always;
+      width: 100%;
+      height: 100vh;
+    }
+    .pager {
+      display: none;
+    }
+  }
 </style>
 <script>
   addEventListener('DOMContentLoaded', () => {
-    const slides = [...document.querySelectorAll('.slide')]; let i = 0
-    const pager = document.body.appendChild(Object.assign(document.createElement('div'), { className: 'pager' }))
-    const show = (n) => { i = Math.max(0, Math.min(slides.length - 1, n)); slides.forEach((s, k) => s.classList.toggle('active', k === i)); pager.textContent = `${i + 1} / ${slides.length}`; dispatchEvent(new Event('resize')) }
-    addEventListener('keydown', (e) => { if (['ArrowRight', 'PageDown', ' '].includes(e.key)) show(i + 1); if (['ArrowLeft', 'PageUp'].includes(e.key)) show(i - 1); if (e.key === 'f') document.documentElement.requestFullscreen?.() })
-    addEventListener('click', (e) => { if (!e.target.closest('a')) show(e.clientX > innerWidth / 3 ? i + 1 : i - 1) })
+    const slides = [...document.querySelectorAll('.slide')]
+    let i = 0
+    const pager = document.body.appendChild(
+      Object.assign(document.createElement('div'), { className: 'pager' }),
+    )
+    const show = (n) => {
+      i = Math.max(0, Math.min(slides.length - 1, n))
+      slides.forEach((s, k) => s.classList.toggle('active', k === i))
+      pager.textContent = `${i + 1} / ${slides.length}`
+      dispatchEvent(new Event('resize'))
+    }
+    addEventListener('keydown', (e) => {
+      if (['ArrowRight', 'PageDown', ' '].includes(e.key)) show(i + 1)
+      if (['ArrowLeft', 'PageUp'].includes(e.key)) show(i - 1)
+      if (e.key === 'f') document.documentElement.requestFullscreen?.()
+    })
+    addEventListener('click', (e) => {
+      if (!e.target.closest('a')) show(e.clientX > innerWidth / 3 ? i + 1 : i - 1)
+    })
     show(0)
   })
 </script>

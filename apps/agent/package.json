@@ -11,7 +11,8 @@
     "dev:tui": "sh ./scripts/with-env.sh eve dev --port 2000",
     "build": "sh ./scripts/with-env.sh eve build",
     "start": "eve start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "check": "sh ./scripts/check-discovery.sh"
   },
   "dependencies": {
     "@ai-sdk/openai-compatible": "3.0.75",

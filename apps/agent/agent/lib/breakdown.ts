@@ -12,15 +12,21 @@ export interface Breakdown {
 export function breakdown(rows: Record<string, unknown>[]): Breakdown {
   return {
     district: countBy(rows, (r) => r.district_county, 20),
-    month: countBy(rows, (r) => (typeof r.established_date === 'string' ? r.established_date.slice(0, 7) : null), 24).sort(
-      ([a], [b]) => a.localeCompare(b),
-    ),
+    month: countBy(
+      rows,
+      (r) => (typeof r.established_date === 'string' ? r.established_date.slice(0, 7) : null),
+      24,
+    ).sort(([a], [b]) => a.localeCompare(b)),
     status: countBy(rows, (r) => r.registration_status, 10),
     industry: countBy(rows, (r) => r.industry_major, 12),
   }
 }
 
-function countBy(rows: Record<string, unknown>[], key: (row: Record<string, unknown>) => unknown, top: number) {
+function countBy(
+  rows: Record<string, unknown>[],
+  key: (row: Record<string, unknown>) => unknown,
+  top: number,
+) {
   const counts = new Map<string, number>()
   for (const row of rows) {
     const value = key(row)

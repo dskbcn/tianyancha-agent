@@ -29,7 +29,10 @@ export function useModels(): ModelCatalog | null {
   return catalog
 }
 
-export function modelLabel(catalog: ModelCatalog | null, id: string | undefined): string | undefined {
+export function modelLabel(
+  catalog: ModelCatalog | null,
+  id: string | undefined,
+): string | undefined {
   if (!id) return undefined
   return catalog?.models.find((m) => m.id === id)?.label ?? id
 }

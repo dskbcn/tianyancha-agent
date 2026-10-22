@@ -107,5 +107,6 @@ export class CompanyDb {
 
 /** Server errors carry sqlglot's terminal underline codes (ESC[4m … ESC[0m); drop them. */
 export function cleanError(text: string): string {
+  // oxlint-disable-next-line no-control-regex -- matching ESC is the point
   return text.replace(/\x1b\[[0-9;]*m/g, '').trim()
 }

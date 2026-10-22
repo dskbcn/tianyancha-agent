@@ -1,38 +1,38 @@
 ---
-description: "Use before the first company_sql / company_find / company_profile call in a session — field reference, data coverage, and SQL pitfalls for the 企业工商 tables."
+description: 'Use before the first company_sql / company_find / company_profile call in a session — field reference, data coverage, and SQL pitfalls for the 企业工商 tables.'
 ---
 
 # 企业库查询要点
 
 ## 表 tyc_advanced_search_companies（主键 id，约 562 万行）
 
-| 列 | 说明 |
-|---|---|
-| company_name | 公司名称 |
-| registration_status | 登记状态：存续 414 万、注销 140 万、吊销、正常、在业、责令关闭、撤销… |
-| enterprise_size | 微型 / 小型 / 中型 / 大型（另有 NULL 和 '-'） |
-| registered_capital | 注册资本，TEXT，如 '500万人民币'；31% 为空 |
-| paid_in_capital | 实缴资本，93% 为空，不要拿来分析 |
-| established_date / approved_date | 成立 / 核准日期，TEXT，全部是 YYYY-MM-DD |
-| city / district_county | 城市（杭州市、深圳市）/ 区县 |
-| enterprise_type | 企业类型，含 '个体工商户'；括号有全角半角两种写法 |
-| industry_category / industry_major / industry_subcategory | 国标行业门类 / 大类 / 中类；门类 16% 为空 |
-| unified_social_credit_code | 统一社会信用代码 |
-| insured_person_count | 参保人数，TEXT 整数，69% 为空 |
-| legal_representative | 法定代表人（几乎全有） |
-| valid_mobile_phone, more_phones | 有效手机号、更多电话（约 31% / 14% 有值） |
-| email, other_email | 邮箱、其他邮箱（约 29% 有值） |
-| registered_address, latest_annual_report_address, mailing_address | 注册地址、最新年报地址、通信地址 |
-| website, business_scope, former_names, tianyan_score | 网址、经营范围、曾用名、天眼评分 |
+| 列                                                                | 说明                                                                  |
+| ----------------------------------------------------------------- | --------------------------------------------------------------------- |
+| company_name                                                      | 公司名称                                                              |
+| registration_status                                               | 登记状态：存续 414 万、注销 140 万、吊销、正常、在业、责令关闭、撤销… |
+| enterprise_size                                                   | 微型 / 小型 / 中型 / 大型（另有 NULL 和 '-'）                         |
+| registered_capital                                                | 注册资本，TEXT，如 '500万人民币'；31% 为空                            |
+| paid_in_capital                                                   | 实缴资本，93% 为空，不要拿来分析                                      |
+| established_date / approved_date                                  | 成立 / 核准日期，TEXT，全部是 YYYY-MM-DD                              |
+| city / district_county                                            | 城市（杭州市、深圳市）/ 区县                                          |
+| enterprise_type                                                   | 企业类型，含 '个体工商户'；括号有全角半角两种写法                     |
+| industry_category / industry_major / industry_subcategory         | 国标行业门类 / 大类 / 中类；门类 16% 为空                             |
+| unified_social_credit_code                                        | 统一社会信用代码                                                      |
+| insured_person_count                                              | 参保人数，TEXT 整数，69% 为空                                         |
+| legal_representative                                              | 法定代表人（几乎全有）                                                |
+| valid_mobile_phone, more_phones                                   | 有效手机号、更多电话（约 31% / 14% 有值）                             |
+| email, other_email                                                | 邮箱、其他邮箱（约 29% 有值）                                         |
+| registered_address, latest_annual_report_address, mailing_address | 注册地址、最新年报地址、通信地址                                      |
+| website, business_scope, former_names, tianyan_score              | 网址、经营范围、曾用名、天眼评分                                      |
 
 表 `tyc_business_scope_embeddings`（company_id = 上表 id）只用于语义检索，不要直接查。
 
 ## 覆盖范围
 
-| 城市 | 行数 | 成立日期覆盖 | 最近更新 |
-|---|---|---|---|
+| 城市   | 行数   | 成立日期覆盖            | 最近更新   |
+| ------ | ------ | ----------------------- | ---------- |
 | 杭州市 | 295 万 | 2017-07-19 → 2026-09-30 | 2026-10-21 |
-| 深圳市 | 267 万 | 2020-01 → 2026-05-20 | 2026-06-24 |
+| 深圳市 | 267 万 | 2020-01 → 2026-05-20    | 2026-06-24 |
 
 - 这不是全量企业名录，而是这段时间内成立的市场主体。"杭州有多少企业"不能回答，"2017 年 7 月以来杭州成立了多少"可以。
 - 比较杭州和深圳只用两地都有数据的区间（2020-01 到 2026-05-20）。

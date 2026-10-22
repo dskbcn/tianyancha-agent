@@ -13,10 +13,16 @@ export default defineTool({
     })
     .refine((input) => input.code || input.name, '需要 code 或 name'),
   async execute(input, ctx) {
-    const { db, config } = companyDb()
+    const { db } = companyDb()
     try {
       const result = await lookupCompany(db, input, { signal: ctx.abortSignal })
-      return { kind: 'profile' as const, columns: result.columns, rows: result.rows, rowCount: result.rowCount, ms: result.ms }
+      return {
+        kind: 'profile' as const,
+        columns: result.columns,
+        rows: result.rows,
+        rowCount: result.rowCount,
+        ms: result.ms,
+      }
     } catch (error) {
       if (error instanceof CompanyDbError) return { kind: 'error' as const, error: error.message }
       throw error
@@ -25,7 +31,11 @@ export default defineTool({
   label: {
     start: ({ code, name }) => `查询企业：${name ?? code}`,
     complete: (_input, output) =>
-      'error' in output ? '查询企业（失败）' : output.rowCount === 1 ? `找到：${output.rows[0]?.company_name}` : `${output.rowCount} 个候选`,
+      'error' in output
+        ? '查询企业（失败）'
+        : output.rowCount === 1
+          ? `找到：${output.rows[0]?.company_name}`
+          : `${output.rowCount} 个候选`,
   },
   toModelOutput(output) {
     if (output.kind === 'error') return { type: 'text', value: `查询失败：${output.error}` }

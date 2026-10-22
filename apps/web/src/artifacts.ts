@@ -27,7 +27,9 @@ export interface ArtifactEntry {
 export const ARTIFACT_TOOLS = new Set(['artifact_publish', 'artifact_edit', 'artifact_read'])
 
 export function isArtifactOutput(value: unknown): value is ArtifactOutput {
-  return typeof value === 'object' && value !== null && (value as { kind?: unknown }).kind === 'artifact'
+  return (
+    typeof value === 'object' && value !== null && (value as { kind?: unknown }).kind === 'artifact'
+  )
 }
 
 /** Every artifact the conversation produced, with its versions in order. */
@@ -35,12 +37,19 @@ export function collectArtifacts(messages: readonly EveMessage[]): Map<string, A
   const out = new Map<string, ArtifactEntry>()
   for (const message of messages) {
     for (const part of message.parts) {
-      if (part.type !== 'dynamic-tool' || part.state !== 'output-available' || part.partial) continue
+      if (part.type !== 'dynamic-tool' || part.state !== 'output-available' || part.partial)
+        continue
       if (!isArtifactOutput(part.output)) continue
       const o = part.output
-      const entry = out.get(o.id) ?? { id: o.id, title: o.title, artifactKind: o.artifactKind, versions: [] }
+      const entry = out.get(o.id) ?? {
+        id: o.id,
+        title: o.title,
+        artifactKind: o.artifactKind,
+        versions: [],
+      }
       entry.title = o.title
-      if (!entry.versions.some((v) => v.version === o.version)) entry.versions.push({ ...o, callId: part.toolCallId })
+      if (!entry.versions.some((v) => v.version === o.version))
+        entry.versions.push({ ...o, callId: part.toolCallId })
       out.set(o.id, entry)
     }
   }
@@ -82,12 +91,17 @@ export function partialHtml(inputText: string | undefined): string | null {
 
 /** A draft for the no-script preview frame: the page as far as it is written, with a CSP that runs nothing. */
 export function draftDocument(html: string): string {
-  const csp = "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:"
+  const csp =
+    "default-src 'none'; script-src 'none'; style-src 'unsafe-inline'; img-src data:; font-src data:"
   const meta = `<meta http-equiv="Content-Security-Policy" content="${csp}">`
   return /<head[^>]*>/i.test(html) ? html.replace(/<head([^>]*)>/i, `<head$1>${meta}`) : meta + html
 }
 
-export type PanelTarget = { mode: 'artifact'; id: string; version?: number } | { mode: 'draft'; callId: string }
+export type PanelTarget =
+  | { mode: 'artifact'; id: string; version?: number }
+  | { mode: 'draft'; callId: string }
 
-export const ArtifactPanelContext = createContext<{ open: (target: PanelTarget) => void }>({ open: () => {} })
+export const ArtifactPanelContext = createContext<{ open: (target: PanelTarget) => void }>({
+  open: () => {},
+})
 export const useArtifactPanel = () => useContext(ArtifactPanelContext)

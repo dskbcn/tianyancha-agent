@@ -14,7 +14,9 @@ export type Library = (typeof LIBRARIES)[number]
 
 const DOCTYPE = '<!doctype html>'
 
-export type Validation = { ok: true; html: string; bytes: number; libraries: Library[] } | { ok: false; error: string }
+export type Validation =
+  | { ok: true; html: string; bytes: number; libraries: Library[] }
+  | { ok: false; error: string }
 
 /** The document as stored: trimmed, with a canonical doctype first. */
 export function normalize(html: string): string {
@@ -24,12 +26,24 @@ export function normalize(html: string): string {
 export function validate(raw: string): Validation {
   const html = normalize(raw)
   const bytes = Buffer.byteLength(html, 'utf8')
-  if (bytes > MAX_ARTIFACT_BYTES) return { ok: false, error: `页面超过 1 MB（${bytes} 字节）。数据放进 data 引用，不要写进 HTML。` }
-  if (!html.startsWith(DOCTYPE)) return { ok: false, error: `必须以 <!doctype html> 开头，现在以 ${JSON.stringify(html.slice(0, 24))} 开头。` }
+  if (bytes > MAX_ARTIFACT_BYTES)
+    return {
+      ok: false,
+      error: `页面超过 1 MB（${bytes} 字节）。数据放进 data 引用，不要写进 HTML。`,
+    }
+  if (!html.startsWith(DOCTYPE))
+    return {
+      ok: false,
+      error: `必须以 <!doctype html> 开头，现在以 ${JSON.stringify(html.slice(0, 24))} 开头。`,
+    }
   for (const tag of ['html', 'head', 'body']) {
     const open = html.match(new RegExp(`<${tag}(?:\\s[^>]*)?>`, 'gi'))?.length ?? 0
     const close = html.match(new RegExp(`</${tag}\\s*>`, 'gi'))?.length ?? 0
-    if (open !== 1 || close !== 1) return { ok: false, error: `必须恰好有一个 <${tag}> 元素（现在开 ${open} 个、闭 ${close} 个）。` }
+    if (open !== 1 || close !== 1)
+      return {
+        ok: false,
+        error: `必须恰好有一个 <${tag}> 元素（现在开 ${open} 个、闭 ${close} 个）。`,
+      }
   }
 
   const libraries = new Set<Library>()
@@ -38,20 +52,35 @@ export function validate(raw: string): Validation {
     if (src === undefined) continue
     const name = src.startsWith('lib:') ? src.slice(4) : null
     if (!name || !(LIBRARIES as readonly string[]).includes(name)) {
-      return { ok: false, error: `外部脚本不可用：${src}。脚本写成内联；图表库用 <script src="lib:echarts"></script>。` }
+      return {
+        ok: false,
+        error: `外部脚本不可用：${src}。脚本写成内联；图表库用 <script src="lib:echarts"></script>。`,
+      }
     }
     libraries.add(name as Library)
   }
   for (const tag of ['iframe', 'frame', 'object', 'embed', 'base', 'form']) {
-    if (new RegExp(`<${tag}\\b`, 'i').test(html)) return { ok: false, error: `不允许 <${tag}> 元素。` }
+    if (new RegExp(`<${tag}\\b`, 'i').test(html))
+      return { ok: false, error: `不允许 <${tag}> 元素。` }
   }
-  if (/<meta\b[^>]*http-equiv\s*=\s*["']?refresh/i.test(html)) return { ok: false, error: '不允许 meta refresh。' }
-  if (/\b(?:href|src|action)\s*=\s*["']?\s*(?:javascript|vbscript):/i.test(html)) return { ok: false, error: '不允许 javascript: 链接。' }
-  for (const match of html.matchAll(/<(?:img|source|video|audio)\b[^>]*\bsrc\s*=\s*["']?([^"'\s>]+)/gi)) {
-    if (!match[1]!.startsWith('data:')) return { ok: false, error: `图片和媒体只能用内嵌 data: URL，页面没有网络：${match[1]!.slice(0, 80)}` }
+  if (/<meta\b[^>]*http-equiv\s*=\s*["']?refresh/i.test(html))
+    return { ok: false, error: '不允许 meta refresh。' }
+  if (/\b(?:href|src|action)\s*=\s*["']?\s*(?:javascript|vbscript):/i.test(html))
+    return { ok: false, error: '不允许 javascript: 链接。' }
+  for (const match of html.matchAll(
+    /<(?:img|source|video|audio)\b[^>]*\bsrc\s*=\s*["']?([^"'\s>]+)/gi,
+  )) {
+    if (!match[1]!.startsWith('data:'))
+      return {
+        ok: false,
+        error: `图片和媒体只能用内嵌 data: URL，页面没有网络：${match[1]!.slice(0, 80)}`,
+      }
   }
   if (/<link\b[^>]*rel\s*=\s*["']?stylesheet/i.test(html) || /@import\s/i.test(html)) {
-    return { ok: false, error: '外部样式表和 @import 不可用（包括网络字体）；样式写在 <style> 里，字体用系统字体。' }
+    return {
+      ok: false,
+      error: '外部样式表和 @import 不可用（包括网络字体）；样式写在 <style> 里，字体用系统字体。',
+    }
   }
   const syntax = scriptSyntaxError(html)
   if (syntax) return { ok: false, error: syntax }
@@ -64,11 +93,14 @@ export function validate(raw: string): Validation {
  */
 function scriptSyntaxError(html: string): string | null {
   const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)].filter(
-    (m) => attribute(m[1]!, 'src') === undefined && !/type\s*=\s*["']?(?!text\/javascript|module)[^"'\s>]/i.test(m[1]!),
+    (m) =>
+      attribute(m[1]!, 'src') === undefined &&
+      !/type\s*=\s*["']?(?!text\/javascript|module)[^"'\s>]/i.test(m[1]!),
   )
   for (const [index, match] of scripts.entries()) {
     const code = match[2]!
     try {
+      // oxlint-disable-next-line no-new -- compiling is the check; the script never runs
       new Script(code, { filename: `script-${index + 1}.js` })
     } catch (error) {
       if (!(error instanceof SyntaxError)) continue
@@ -81,7 +113,9 @@ function scriptSyntaxError(html: string): string | null {
 }
 
 function attribute(attributes: string, name: string): string | undefined {
-  const match = attributes.match(new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i'))
+  const match = attributes.match(
+    new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, 'i'),
+  )
   return match ? (match[1] ?? match[2] ?? match[3]) : undefined
 }
 
@@ -91,17 +125,27 @@ export interface Edit {
 }
 
 /** Applies exact replacements in order; each old_string must match exactly once at its turn. */
-export function applyEdits(html: string, edits: Edit[]): { ok: true; html: string } | { ok: false; error: string } {
+export function applyEdits(
+  html: string,
+  edits: Edit[],
+): { ok: true; html: string } | { ok: false; error: string } {
   let current = html
   for (const [index, edit] of edits.entries()) {
     const first = current.indexOf(edit.old_string)
     if (edit.old_string === '' || first < 0) {
-      return { ok: false, error: `第 ${index + 1} 处修改：old_string 在当前页面中找不到。先用 artifact_read 读取当前内容。` }
+      return {
+        ok: false,
+        error: `第 ${index + 1} 处修改：old_string 在当前页面中找不到。先用 artifact_read 读取当前内容。`,
+      }
     }
     if (current.indexOf(edit.old_string, first + 1) >= 0) {
-      return { ok: false, error: `第 ${index + 1} 处修改：old_string 出现了多次，加上前后文让它唯一。` }
+      return {
+        ok: false,
+        error: `第 ${index + 1} 处修改：old_string 出现了多次，加上前后文让它唯一。`,
+      }
     }
-    current = current.slice(0, first) + edit.new_string + current.slice(first + edit.old_string.length)
+    current =
+      current.slice(0, first) + edit.new_string + current.slice(first + edit.old_string.length)
   }
   return { ok: true, html: current }
 }
@@ -139,7 +183,10 @@ export interface DataTable {
  */
 export function prepare(
   html: string,
-  { data, libraries }: { data: Record<string, DataTable>; libraries: Partial<Record<Library, string>> },
+  {
+    data,
+    libraries,
+  }: { data: Record<string, DataTable>; libraries: Partial<Record<Library, string>> },
 ): string {
   // No WebRTC: CSP does not cover it, and it is the one way left to reach the network (fx0).
   // Runtime errors: a banner in the page, and a message to the preview panel, which offers a fix.
@@ -150,10 +197,15 @@ export function prepare(
   const dataScript = `<script>window.DATA=${safeJson(data)};</script>`
   const head = `<meta http-equiv="Content-Security-Policy" content="${ARTIFACT_CSP}">${bootstrap}${dataScript}`
   const withHead = html.replace(/<head(\s[^>]*)?>/i, (open) => open + head)
-  return withHead.replace(/<script\b[^>]*\bsrc\s*=\s*["']?lib:([a-z0-9-]+)["']?[^>]*>\s*<\/script>/gi, (whole, name: string) => {
-    const source = libraries[name as Library]
-    return source === undefined ? whole : `<script>${source.replaceAll('</script', '<\\/script')}</script>`
-  })
+  return withHead.replace(
+    /<script\b[^>]*\bsrc\s*=\s*["']?lib:([a-z0-9-]+)["']?[^>]*>\s*<\/script>/gi,
+    (whole, name: string) => {
+      const source = libraries[name as Library]
+      return source === undefined
+        ? whole
+        : `<script>${source.replaceAll('</script', '<\\/script')}</script>`
+    },
+  )
 }
 
 /** JSON that cannot close the <script> it sits in. */

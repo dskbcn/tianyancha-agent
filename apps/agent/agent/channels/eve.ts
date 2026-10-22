@@ -25,7 +25,8 @@ export default eveChannel({
     const clientContext = Object.keys(rest).length > 0 ? (rest as typeof sent) : []
     const imported = toHistory(history)
     return {
-      auth: auth && isOffered(model) ? { ...auth, attributes: { ...auth.attributes, model } } : auth,
+      auth:
+        auth && isOffered(model) ? { ...auth, attributes: { ...auth.attributes, model } } : auth,
       clientContext,
       ...(imported ? { history: imported } : {}),
     }
@@ -37,7 +38,11 @@ function toHistory(value: unknown): { role: 'user' | 'assistant'; text: string }
   const entries = value
     .filter(
       (e): e is { role: 'user' | 'assistant'; text: string } =>
-        typeof e === 'object' && e !== null && (e.role === 'user' || e.role === 'assistant') && typeof e.text === 'string' && e.text.trim() !== '',
+        typeof e === 'object' &&
+        e !== null &&
+        (e.role === 'user' || e.role === 'assistant') &&
+        typeof e.text === 'string' &&
+        e.text.trim() !== '',
     )
     .slice(-HISTORY_ENTRIES)
     .map((e) => ({ role: e.role, text: e.text.slice(0, HISTORY_ENTRY_CHARS) }))

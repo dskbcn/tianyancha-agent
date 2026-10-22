@@ -1,7 +1,7 @@
 # tianyancha-agent: 企业数据分析 agent plan
 
-Status: plan settled 2026-10-22 (open questions 1–4 answered); spikes 0.1–0.4 done
-(`docs/spikes/`); a working preview (agent + web) exists on `feat/0.4-web-preview`. Started 2026-10-22. Data source facts below were measured
+Status: phase 0 done (`docs/spikes/`); the 0.4 preview (agent + web + artifacts) merged to `main`
+2026-10-22; phase 1 in progress (1.1 next). Started 2026-10-22. Data source facts below were measured
 against the live MCP server on 2026-10-22.
 
 References: `~/Dev/weixin-article-agent` (eve agent shape: authored tools, skills, channels,
@@ -180,27 +180,38 @@ web UI can render a result's preview table and a download link from the same too
 
 ### Phase 1: an agent that answers
 
-- **1.1 Workspace.** Root `package.json`, `pnpm-workspace.yaml` (catalog, `saveExact`),
-  `tsconfig.base.json`, oxfmt, ESLint (core-purity rule), Vitest, `.nvmrc`, `.gitignore`,
-  `.env.example`, `AGENTS.md` + `CLAUDE.md`, README, CI (format, lint, typecheck, test).
-- **1.2 `packages/company-db`.** Client, `schema()`, `sql()`, `find()`, `profile()`, LIMIT
-  injection, date-cast lint, CSV writer. Unit tests against an in-process fake MCP server
-  (SDK `McpServer` over `InMemoryTransport`), including the dropped-session case.
-- **1.3 `apps/agent`.** `agent.ts` (model, compaction), `instructions.md`, the tools above,
-  skill `company-analysis`, `justbash` sandbox, built-ins disabled. `pnpm dev` answers the five
-  typical questions.
-- **1.4 CLI.** `pnpm cdb sql "<SELECT …>"`, `pnpm cdb find --desc … --kw …` → CSV.
-- **1.5 `apps/web`.** Chat on `useEveAgent`: streamed answer, tool-call progress (queries can
-  take tens of seconds), result tables from tool previews, CSV download links, sign-in through
-  the route's basic auth. Served by Caddy next to the agent; in dev Vite proxies `/eve`.
+Most of this phase was built as the 0.4 preview (merged to `main` 2026-10-22). Status per item:
+
+- **1.1 Workspace.** Done in the preview: root `package.json`, `pnpm-workspace.yaml` (catalog,
+  `saveExact`), `tsconfig.base.json`, `.nvmrc`, `.gitignore`, `.env.example`, README.
+  Remaining: oxfmt, ESLint (purity rule: `packages/*` import no eve, AI SDK or React), root
+  Vitest run, `AGENTS.md` + `CLAUDE.md`, CI (format, lint, typecheck, test, `eve info`).
+- **1.2 `packages/company-db`.** Done: client (reconnect once, 3-call semaphore), `runSql`
+  (limit always sent, pre-checks, lint warnings), `findCompanies`, `lookupCompany`, CSV.
+  Remaining: tests against an in-process fake MCP server (SDK `McpServer` over
+  `InMemoryTransport`) for the dropped-session reconnect and the semaphore; paging past the
+  server's 2,000-row cap up to `QUERY_ROW_CAP`.
+- **1.3 `apps/agent`.** Done: Bailian models chosen per message (`lib/models.ts`), instructions,
+  skills `company-analysis` and `artifact-design`, tools `company_sql` / `company_find` /
+  `company_profile` / `artifact_*`, `/files`, `/artifacts`, `/models` routes.
+- **1.4 CLI.** Remaining: `pnpm cdb sql "<SELECT …>"`, `pnpm cdb find --desc … --kw …` → CSV.
+- **1.5 `apps/web`.** Done: chat on `useEveAgent` with tool cards, result tables, CSV
+  downloads, artifact side panel, model picker, stop/steer, recovery when a session ended.
+- **1.6 Chats on the server.** New. Saved chats live in the browser's localStorage (one
+  conversation is ~900 events, so it fills after tens of chats, and chats do not follow the
+  user to another browser). Keep the chat list and each chat's session cursor on the agent,
+  and render history by replaying the session stream.
+- **1.7 Artifacts in a build.** New. `lib/artifacts.ts` reads ECharts from `node_modules` at
+  runtime; `eve build` output is self-contained, so copy the library into the build and
+  verify an artifact renders from `node .output/server/index.mjs`.
 
 ### Phase 2: analysis quality
 
 - **2.1 Cookbook** in the skill: new registrations by month / district / industry; cohort
   survival (注销/吊销 rate by establishment year); capital buckets; top-N; year-on-year;
   杭州 vs 深圳 restricted to their overlapping window (2020 →).
-- **2.2 Reports and exports.** `write_report` with front matter (question, SQL, as-of,
-  coverage); `export_xlsx` (one sheet per result).
+- **2.2 Exports.** Reports are now HTML artifacts (`kind: report`). Remaining: `export_xlsx`
+  (one sheet per query result in the session).
 - **2.3 Evals.** The 0.3 golden set (in `docs/spikes/0.3-model.md`, plus the missing kinds listed there) as eve evals with expected numbers computed by direct SQL.
   Run on demand and before releases (needs the model endpoint, so not in CI).
 - **2.4 `company_similar`**, and charts in reports if users ask for them.

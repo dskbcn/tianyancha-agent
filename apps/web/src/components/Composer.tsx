@@ -28,12 +28,11 @@ export function Composer({
   // isComposing already false, so the flag is cleared a tick later to swallow that Enter.
   const composing = useRef(false)
 
-  useEffect(() => {
-    const el = ref.current
+  const resize = (el: HTMLTextAreaElement | null) => {
     if (!el) return
     el.style.height = 'auto'
     el.style.height = `${Math.min(el.scrollHeight, 200)}px`
-  }, [text])
+  }
 
   useEffect(() => {
     if (autoFocus) ref.current?.focus()
@@ -44,6 +43,7 @@ export function Composer({
     if (!value || disabled) return
     onSend(value)
     setText('')
+    requestAnimationFrame(() => resize(ref.current))
   }
 
   return (
@@ -53,7 +53,10 @@ export function Composer({
         rows={1}
         value={text}
         disabled={disabled}
-        onChange={(e) => setText(e.target.value)}
+        onChange={(e) => {
+          setText(e.target.value)
+          resize(e.target)
+        }}
         onCompositionStart={() => {
           composing.current = true
         }}
@@ -70,7 +73,9 @@ export function Composer({
           e.preventDefault()
           submit()
         }}
-        placeholder={busy ? '补充说明会插入当前回答（Enter 发送）…' : '问一个关于杭州或深圳企业的问题…'}
+        placeholder={
+          busy ? '补充说明会插入当前回答（Enter 发送）…' : '问一个关于杭州或深圳企业的问题…'
+        }
         className="block w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[15px] leading-relaxed outline-none placeholder:text-faint disabled:opacity-60"
       />
       <div className="flex items-center justify-between px-3 pb-2.5">
@@ -81,7 +86,9 @@ export function Composer({
               title="选择模型：下一条消息起生效"
             >
               <Cpu className="size-3.5" />
-              <span className="max-w-[10rem] truncate">{models.models.find((m) => m.id === model)?.label ?? model}</span>
+              <span className="max-w-[10rem] truncate">
+                {models.models.find((m) => m.id === model)?.label ?? model}
+              </span>
               <ChevronDown className="size-3" />
               <select
                 value={model}

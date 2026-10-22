@@ -15,12 +15,19 @@ export default defineChannel({
     GET('/artifacts/:sessionId/:id/:version', async (request, { params }) => {
       await routeAuth(request, routePolicy('tianyancha-agent'))
       const version = Number(params.version)
-      if (!Number.isInteger(version) || version < 1) return new Response('not found', { status: 404 })
+      if (!Number.isInteger(version) || version < 1)
+        return new Response('not found', { status: 404 })
       let page
       try {
-        page = await preparedPage(decodeURIComponent(params.sessionId), decodeURIComponent(params.id), version)
+        page = await preparedPage(
+          decodeURIComponent(params.sessionId),
+          decodeURIComponent(params.id),
+          version,
+        )
       } catch (error) {
-        return new Response(`artifact data unavailable: ${(error as Error).message}`, { status: 410 })
+        return new Response(`artifact data unavailable: ${(error as Error).message}`, {
+          status: 410,
+        })
       }
       if (!page) return new Response('not found', { status: 404 })
       const download = new URL(request.url).searchParams.has('download')
@@ -34,7 +41,11 @@ export default defineChannel({
           // Revalidate: the page is prepared at request time (injected reporter, libraries), so a
           // cached copy can be stale even though the stored version never changes.
           'cache-control': 'private, no-cache',
-          ...(download ? { 'content-disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}` } : {}),
+          ...(download
+            ? {
+                'content-disposition': `attachment; filename*=UTF-8''${encodeURIComponent(filename)}`,
+              }
+            : {}),
         },
       })
     }),
