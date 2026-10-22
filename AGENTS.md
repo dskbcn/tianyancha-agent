@@ -82,7 +82,7 @@ Run from the repo root.
 | `pnpm typecheck`                    | `tsc --noEmit` in every package                                      |
 | `pnpm test`                         | Vitest in every package                                              |
 | `pnpm check:agent`                  | eve discovery: fails on a broken skill, tool or channel file         |
-| `docker compose up -d --build`      | Beta deployment: one container on `AGENT_PORT` (README "Deploy")     |
+| `docker compose up -d`              | Beta: runs the registry image `AGENT_TAG` (README "Deploy (beta)")   |
 
 Before saying a change is done: `pnpm format:check && pnpm lint && pnpm typecheck && pnpm test &&
 pnpm check:agent`. For agent or UI behaviour, also run it: `pnpm dev`, then a real question in

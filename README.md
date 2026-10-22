@@ -34,11 +34,19 @@ opens eve's terminal UI instead. CSV results land in `output/<sessionId>/`.
 ## Deploy (beta)
 
 One container on one port: the agent serves the API and the web UI's build, with no proxy in
-front. On the server, from a checkout of this repo, with Docker:
+front. Build the image on your machine and push it to the Aliyun registry (log in first with
+`docker login registry.cn-hangzhou.aliyuncs.com`); `--platform` matters on an Apple Silicon Mac:
 
 ```sh
-cp .env.example .env        # fill the two API keys and AGENT_USERS (one login per tester)
-docker compose up -d --build
+docker buildx build --platform linux/amd64 --push \
+  -t registry.cn-hangzhou.aliyuncs.com/dskb/tianyancha-agent:beta.1 .
+```
+
+On the server, next to `docker-compose.yml` and a `.env`, with Docker logged in to the registry:
+
+```sh
+cp .env.example .env        # the two API keys, AGENT_USERS (one login per tester), AGENT_TAG
+docker compose pull && docker compose up -d
 curl http://localhost:8080/eve/v1/health
 ```
 
@@ -49,7 +57,9 @@ login sees only its own chats, results and artifacts. `AGENT_PORT` in `.env` cha
   rebuild). A removed login's chats stay on disk but nobody can open them.
 - **Data:** two volumes, `workflow-data` (sessions: without it every chat's session ends on
   redeploy) and `output` (CSVs, artifacts, `chats.json`). `docker compose down -v` deletes them.
-- **Update:** `git pull && docker compose up -d --build`. Running chats continue after the restart.
+- **Update:** push a new tag (`beta.2`), set `AGENT_TAG=beta.2` in `.env`, then
+  `docker compose pull && docker compose up -d`. Running chats continue after the restart. Roll
+  back by setting the previous tag.
 - **Plain HTTP:** passwords cross the network unencrypted, so keep it on the internal network.
   For a domain with TLS, put Dokploy (Traefik) in front of the same container on port 3000.
 

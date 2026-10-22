@@ -1,16 +1,13 @@
-# Beta deployment: one container on one port, no proxy. Settings come from .env next to this
-# file (copy .env.example; AGENT_USERS holds the testers' logins). Later, Dokploy's Traefik can
-# route a domain with TLS to the same container.
+# Beta deployment: one container on one port, no proxy, running the image pushed to the Aliyun
+# registry (README "Deploy (beta)"). Settings come from .env next to this file (copy
+# .env.example; AGENT_USERS holds the testers' logins, AGENT_TAG picks the image). Later,
+# Dokploy's Traefik can route a domain with TLS to the same container.
 #
-#   docker compose up -d --build
+#   docker compose pull && docker compose up -d
 #   open http://<server-ip>:${AGENT_PORT:-8080}/
 services:
   agent:
-    build:
-      context: .
-      args:
-        ALIYUN_BAILIAN_CONTEXT_WINDOW: ${ALIYUN_BAILIAN_CONTEXT_WINDOW:-129024}
-    image: tianyancha-agent
+    image: registry.cn-hangzhou.aliyuncs.com/dskb/tianyancha-agent:${AGENT_TAG:-beta.1}
     restart: unless-stopped
     env_file: .env
     environment:
