@@ -370,10 +370,10 @@ function SqlBlock({ sql }: { sql: string }) {
       <button
         type="button"
         onClick={() => {
-          void navigator.clipboard.writeText(sql).then(() => {
+          if (copyText(sql)) {
             setCopied(true)
             setTimeout(() => setCopied(false), 1200)
-          })
+          }
         }}
         className="absolute top-1.5 right-1.5 rounded-md border border-line bg-surface p-1 text-muted opacity-0 transition group-hover:opacity-100 hover:text-fg"
         aria-label="复制 SQL"
@@ -382,6 +382,27 @@ function SqlBlock({ sql }: { sql: string }) {
       </button>
     </div>
   )
+}
+
+/**
+ * Copies text. `navigator.clipboard` exists only on HTTPS and localhost, and the beta is served
+ * over plain HTTP, so this selects a hidden textarea and uses the older copy command.
+ */
+function copyText(text: string): boolean {
+  const area = document.createElement('textarea')
+  area.value = text
+  area.setAttribute('readonly', '')
+  area.style.position = 'fixed'
+  area.style.opacity = '0'
+  document.body.append(area)
+  area.select()
+  try {
+    return document.execCommand('copy')
+  } catch {
+    return false
+  } finally {
+    area.remove()
+  }
 }
 
 function ErrorBox({ text }: { text?: string }) {
