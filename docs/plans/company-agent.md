@@ -1,7 +1,7 @@
 # tianyancha-agent: 企业数据分析 agent plan
 
-Status: plan settled 2026-10-22 (open questions 1–4 answered); spikes 0.1–0.2 done
-(`docs/spikes/`), 0.3–0.4 next. Started 2026-10-22. Data source facts below were measured
+Status: plan settled 2026-10-22 (open questions 1–4 answered); spikes 0.1–0.3 done
+(`docs/spikes/`), 0.4 next. Started 2026-10-22. Data source facts below were measured
 against the live MCP server on 2026-10-22.
 
 References: `~/Dev/weixin-article-agent` (eve agent shape: authored tools, skills, channels,
@@ -82,7 +82,10 @@ were registered in 杭州 since 2017-07, and how many of them are 个体工商�
 - A query with neither SQL `LIMIT` nor the `limit` argument failed after ~8 s with an HTTP/2
   `INTERNAL_ERROR`, and **the MCP session was dead afterwards**. Every call sends `limit`, and
   the client reconnects once on a lost session.
-- Every scan over the table takes 13–17 s; `find_companies` takes 40–55 s.
+- Every scan over the table takes 13–17 s; `find_companies` takes 40–55 s. The server has a
+  statement timeout: 15 concurrent scans hit it, and so does `ORDER BY id LIMIT n` with a
+  selective filter, alone (spike 0.3). At most 3 concurrent calls per process.
+- `<>` and `NOT IN` drop NULL rows silently (e.g. 2 rows with no `enterprise_type`).
 - Dates are TEXT but uniformly `YYYY-MM-DD`, so string comparison is correct. `date_trunc`
   shifts results by the server's time zone; group by `LEFT(established_date, 7)` instead.
 - `registered_capital` is 31% empty and 99.8% `万人民币` otherwise, with 15 other units.
@@ -101,8 +104,8 @@ were registered in 杭州 since 2017-07, and how many of them are 个体工商�
 | How the agent reaches the data | **Authored tools** over an MCP client in `packages/company-db`, not an eve `defineMcpClientConnection` | eve MCP connections have no `toModelOutput` and cannot force `limit`; one `query_table` call without a limit can return millions of rows into context |
 | MCP client | `@modelcontextprotocol/sdk` Streamable HTTP client with `X-API-Key`, one per process, reconnect once on session loss | The server kills the session on some errors |
 | Results | Full result → `OUTPUT_DIR/<session>/<n>-<slug>.csv` (UTF-8 BOM so Excel opens it); the model sees columns, row count, a 20-row preview, the path, warnings | weixin's rule: the filesystem holds data, the context holds summaries |
-| Row caps | `query`: the `limit` argument on every call (page = 2,000, the server's cap); keyset/`OFFSET` paging up to `QUERY_ROW_CAP` (default 10,000) in total. `find_companies`: one call with `limit = FIND_ROW_CAP` (default 5,000), paging only if `next_offset` is set | The server cannot take unbounded reads and hides its own truncation (spike 0.1) |
-| Model | Alibaba Cloud Bailian (百炼 / DashScope) OpenAI-compatible API through `@ai-sdk/openai-compatible`, unconditional provider in `agent.ts` (weixin's build-time rule applies); which Bailian model is picked by spike 0.3 | Owner's choice. SQL quality is measured, not assumed |
+| Row caps | `query`: the `limit` argument on every call (page = 2,000, the server's cap); keyset/`OFFSET` paging up to `QUERY_ROW_CAP` (default 10,000) in total. `find_companies`: one call with `limit = FIND_ROW_CAP` (default 5,000), paging only if `next_offset` is set. At most `COMPANY_DB_CONCURRENCY` (3) calls in flight | The server cannot take unbounded reads, hides its own truncation (spike 0.1), and times out under load (spike 0.3) |
+| Model | Alibaba Cloud Bailian (百炼 / DashScope) OpenAI-compatible API through `@ai-sdk/openai-compatible`, unconditional provider in `agent.ts` (weixin's build-time rule applies); default `deepseek-v4.1-flash-1017`, `deepseek-v4-pro-0813` by config (spike 0.3) | Owner's choice. Both 15/15 on the golden set; flash faster and cheaper in tokens |
 | Personal data | Contact columns (`valid_mobile_phone`, `more_phones`, `email`, `other_email`) and `legal_representative` are stripped from model output and exports unless `EXPOSE_CONTACTS=true`. Enforced in `packages/company-db`, on the result rows, so free SQL cannot get around it | Owner's choice (open question 1) |
 | Web UI | `apps/web` from phase 1: static Vite app (React, TanStack Router, Tailwind 4 + shadcn/ui as face-platform's console) on `useEveAgent` from `eve/react`; Chinese UI | Owner's choice: non-technical users from v1 |
 | Sandbox | `justbash()`, built-in bash/file tools disabled | Aggregation runs server-side in SQL; no Docker needed. Revisit if we add Python post-processing |
@@ -169,7 +172,7 @@ web UI can render a result's preview table and a download link from the same too
   `CASE`, `FILTER`, window functions); a capital parse expression covering every unit and
   currency present; `established_date` formats; freshness per city (latest date per city,
   since 深圳 2026 looks low next to 杭州).
-- **0.3 Model.** 20 golden questions with known answers, run on two or three Bailian models
+- **0.3 Model.** Done: `docs/spikes/0.3-model.md`. 20 golden questions with known answers, run on two or three Bailian models
   with bare tools. Measure correct-SQL rate, latency and cost; pick the default. If it is poor, add structured tools (e.g.
   `company_stats` with `group_by` / `filters` / `period` parameters) instead of free SQL.
 - **0.4 Web plumbing.** How `eve/react` connects from a static app (base path, auth on the
@@ -200,7 +203,7 @@ web UI can render a result's preview table and a download link from the same too
   杭州 vs 深圳 restricted to their overlapping window (2020 →).
 - **2.2 Reports and exports.** `write_report` with front matter (question, SQL, as-of,
   coverage); `export_xlsx` (one sheet per result).
-- **2.3 Evals.** The 0.3 golden set as eve evals with expected numbers computed by direct SQL.
+- **2.3 Evals.** The 0.3 golden set (in `docs/spikes/0.3-model.md`, plus the missing kinds listed there) as eve evals with expected numbers computed by direct SQL.
   Run on demand and before releases (needs the model endpoint, so not in CI).
 - **2.4 `company_similar`**, and charts in reports if users ask for them.
 
@@ -219,17 +222,20 @@ Charts rendered in the web UI, saved sessions list, report viewer.
 
 ## Environment
 
+Local values live in `.env.dev` (git-ignored, like every `.env*` except `.env.example`).
+
 ```env
 COMPANY_DB_MCP_URL=https://h5.dskb.cn/zh/company/mcp/
 COMPANY_DB_API_KEY=                 # never commit
 QUERY_ROW_CAP=10000
+COMPANY_DB_CONCURRENCY=3
 FIND_ROW_CAP=5000
 OUTPUT_DIR=./output
 EXPOSE_CONTACTS=false
-BAILIAN_BASE_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-BAILIAN_API_KEY=                    # never commit
-BAILIAN_MODEL=                      # chosen in spike 0.3
-BAILIAN_CONTEXT_WINDOW=             # the model's window; baked at eve build
+ALIYUN_BAILIAN_API_HOST=https://dashscope.aliyuncs.com   # the client appends /compatible-mode/v1
+ALIYUN_BAILIAN_API_KEY=             # never commit
+ALIYUN_BAILIAN_MODEL=deepseek-v4.1-flash-1017
+ALIYUN_BAILIAN_CONTEXT_WINDOW=      # the model's window; baked at eve build
 AGENT_USER=
 AGENT_PASSWORD=
 ```
