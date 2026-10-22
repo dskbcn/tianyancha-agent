@@ -34,6 +34,13 @@ services:
       - type: bind
         source: ${DATA_DIR:-/ssd_srv/apps/tianyancha-agent}/output
         target: /app/output
+    logging:
+      # Docker's default driver, rotated: without limits the JSON log file grows until the disk
+      # is full. 5 × 20 MB per task; `docker service logs` reads it.
+      driver: json-file
+      options:
+        max-size: 20m
+        max-file: '5'
     deploy:
       # Exactly one: the chat list and eve's local workflow state are files one process owns.
       replicas: 1
