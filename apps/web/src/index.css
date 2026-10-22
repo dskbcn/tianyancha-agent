@@ -1,0 +1,191 @@
+@import 'tailwindcss';
+
+/* Colour tokens: light by default, dark from the OS setting. Components use the Tailwind names
+   below (bg-surface, text-muted, …), never raw colours. */
+:root {
+  --c-bg: #f7f7f5;
+  --c-surface: #ffffff;
+  --c-sunken: #f1f1ee;
+  --c-border: #e4e4df;
+  --c-text: #1c1c1a;
+  --c-muted: #6b6b66;
+  --c-faint: #9a9a94;
+  --c-accent: #0f766e;
+  --c-accent-soft: #e6f3f1;
+  --c-accent-text: #ffffff;
+  --c-warn: #a16207;
+  --c-warn-soft: #fef6e2;
+  --c-danger: #b42318;
+  --c-danger-soft: #fdecea;
+  --c-ok: #15803d;
+  --c-user: #1f2937;
+  --c-user-text: #f9fafb;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --c-bg: #121211;
+    --c-surface: #1a1a19;
+    --c-sunken: #222220;
+    --c-border: #2e2e2b;
+    --c-text: #ececea;
+    --c-muted: #a3a39d;
+    --c-faint: #6f6f6a;
+    --c-accent: #2dd4bf;
+    --c-accent-soft: #10302c;
+    --c-accent-text: #04201c;
+    --c-warn: #facc15;
+    --c-warn-soft: #2d2410;
+    --c-danger: #f87171;
+    --c-danger-soft: #331716;
+    --c-ok: #4ade80;
+    --c-user: #e7e7e4;
+    --c-user-text: #161615;
+    color-scheme: dark;
+  }
+}
+
+@theme inline {
+  --color-bg: var(--c-bg);
+  --color-surface: var(--c-surface);
+  --color-sunken: var(--c-sunken);
+  --color-line: var(--c-border);
+  --color-fg: var(--c-text);
+  --color-muted: var(--c-muted);
+  --color-faint: var(--c-faint);
+  --color-accent: var(--c-accent);
+  --color-accent-soft: var(--c-accent-soft);
+  --color-accent-fg: var(--c-accent-text);
+  --color-warn: var(--c-warn);
+  --color-warn-soft: var(--c-warn-soft);
+  --color-danger: var(--c-danger);
+  --color-danger-soft: var(--c-danger-soft);
+  --color-ok: var(--c-ok);
+  --color-user: var(--c-user);
+  --color-user-fg: var(--c-user-text);
+  --font-sans:
+    'Inter', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', ui-monospace, Menlo, monospace;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Answer prose: tight, table-friendly. */
+.prose-answer {
+  line-height: 1.75;
+  font-size: 0.9375rem;
+}
+.prose-answer > * + * {
+  margin-top: 0.75rem;
+}
+.prose-answer h1,
+.prose-answer h2,
+.prose-answer h3 {
+  font-weight: 600;
+  line-height: 1.4;
+  margin-top: 1.25rem;
+}
+.prose-answer h1 {
+  font-size: 1.15rem;
+}
+.prose-answer h2 {
+  font-size: 1.05rem;
+}
+.prose-answer h3 {
+  font-size: 0.975rem;
+}
+.prose-answer ul {
+  list-style: disc;
+  padding-left: 1.25rem;
+}
+.prose-answer ol {
+  list-style: decimal;
+  padding-left: 1.25rem;
+}
+.prose-answer li + li {
+  margin-top: 0.25rem;
+}
+.prose-answer strong {
+  font-weight: 600;
+}
+.prose-answer a {
+  color: var(--c-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.prose-answer code {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background: var(--c-sunken);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+.prose-answer pre {
+  background: var(--c-sunken);
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  overflow-x: auto;
+}
+.prose-answer pre code {
+  background: none;
+  padding: 0;
+}
+.prose-answer blockquote {
+  border-left: 3px solid var(--c-border);
+  padding-left: 0.875rem;
+  color: var(--c-muted);
+}
+.prose-answer table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+.prose-answer .table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--c-border);
+  border-radius: 8px;
+}
+.prose-answer th {
+  text-align: left;
+  font-weight: 600;
+  background: var(--c-sunken);
+  white-space: nowrap;
+}
+.prose-answer th,
+.prose-answer td {
+  padding: 0.45rem 0.75rem;
+  border-bottom: 1px solid var(--c-border);
+}
+.prose-answer tr:last-child td {
+  border-bottom: none;
+}
+
+@keyframes caret-blink {
+  50% {
+    opacity: 0;
+  }
+}
+.caret::after {
+  content: '';
+  display: inline-block;
+  width: 0.5em;
+  height: 1em;
+  margin-left: 2px;
+  vertical-align: -0.15em;
+  background: var(--c-accent);
+  animation: caret-blink 1s steps(1) infinite;
+}

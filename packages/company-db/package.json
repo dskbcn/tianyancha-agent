@@ -1,0 +1,21 @@
+{
+  "name": "@tianyancha-agent/company-db",
+  "private": true,
+  "description": "Client for the 企业库查询 MCP server: guards, contact stripping, CSV. No eve or AI SDK imports.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "1.32.1"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

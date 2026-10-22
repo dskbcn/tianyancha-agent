@@ -1,7 +1,7 @@
 # tianyancha-agent: 企业数据分析 agent plan
 
-Status: plan settled 2026-10-22 (open questions 1–4 answered); spikes 0.1–0.3 done
-(`docs/spikes/`), 0.4 next. Started 2026-10-22. Data source facts below were measured
+Status: plan settled 2026-10-22 (open questions 1–4 answered); spikes 0.1–0.4 done
+(`docs/spikes/`); a working preview (agent + web) exists on `feat/0.4-web-preview`. Started 2026-10-22. Data source facts below were measured
 against the live MCP server on 2026-10-22.
 
 References: `~/Dev/weixin-article-agent` (eve agent shape: authored tools, skills, channels,
@@ -107,7 +107,7 @@ were registered in 杭州 since 2017-07, and how many of them are 个体工商�
 | Row caps | `query`: the `limit` argument on every call (page = 2,000, the server's cap); keyset/`OFFSET` paging up to `QUERY_ROW_CAP` (default 10,000) in total. `find_companies`: one call with `limit = FIND_ROW_CAP` (default 5,000), paging only if `next_offset` is set. At most `COMPANY_DB_CONCURRENCY` (3) calls in flight | The server cannot take unbounded reads, hides its own truncation (spike 0.1), and times out under load (spike 0.3) |
 | Model | Alibaba Cloud Bailian (百炼 / DashScope) OpenAI-compatible API through `@ai-sdk/openai-compatible`, unconditional provider in `agent.ts` (weixin's build-time rule applies); default `deepseek-v4.1-flash-1017`, `deepseek-v4-pro-0813` by config (spike 0.3) | Owner's choice. Both 15/15 on the golden set; flash faster and cheaper in tokens |
 | Personal data | Contact columns (`valid_mobile_phone`, `more_phones`, `email`, `other_email`) and `legal_representative` are stripped from model output and exports unless `EXPOSE_CONTACTS=true`. Enforced in `packages/company-db`, on the result rows, so free SQL cannot get around it | Owner's choice (open question 1) |
-| Web UI | `apps/web` from phase 1: static Vite app (React, TanStack Router, Tailwind 4 + shadcn/ui as face-platform's console) on `useEveAgent` from `eve/react`; Chinese UI | Owner's choice: non-technical users from v1 |
+| Web UI | `apps/web`: static Vite app (React 19, Tailwind 4) on `useEveAgent` from `eve/react`, same origin through a proxy (Vite in dev, Caddy in production); downloads via an eve custom channel `GET /files/:session/:name` behind the chat's auth; Chinese UI. Not eve's Vercel-first `channel/web` installer (spike 0.4) | Owner's choice: non-technical users from v1 |
 | Sandbox | `justbash()`, built-in bash/file tools disabled | Aggregation runs server-side in SQL; no Docker needed. Revisit if we add Python post-processing |
 | Repo layout | pnpm workspace: `apps/agent` (eve), `packages/company-db` (framework-free client, guards, result writing) | face-platform pattern; the CLI and tests use the package without eve |
 | Tooling | face-platform's: pnpm 11 catalog, `saveExact`, oxfmt, ESLint, Vitest, Node 24, Conventional Commits | One set of habits across repos |
@@ -175,7 +175,7 @@ web UI can render a result's preview table and a download link from the same too
 - **0.3 Model.** Done: `docs/spikes/0.3-model.md`. 20 golden questions with known answers, run on two or three Bailian models
   with bare tools. Measure correct-SQL rate, latency and cost; pick the default. If it is poor, add structured tools (e.g.
   `company_stats` with `group_by` / `filters` / `period` parameters) instead of free SQL.
-- **0.4 Web plumbing.** How `eve/react` connects from a static app (base path, auth on the
+- **0.4 Web plumbing.** Done: `docs/spikes/0.4-web-plumbing.md`, with a working preview. How `eve/react` connects from a static app (base path, auth on the
   stream, CORS when served from another origin), and how to serve result downloads from
   `OUTPUT_DIR` behind the same auth (an eve route if eve has one, otherwise Caddy
   `file_server` with the same basic auth).

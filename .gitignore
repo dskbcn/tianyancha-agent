@@ -7,3 +7,4 @@ output/
 dist/
 *.tsbuildinfo
 .DS_Store
+.scratch/

@@ -1,0 +1,31 @@
+{
+  "name": "@tianyancha-agent/agent",
+  "private": true,
+  "description": "eve agent: 企业数据分析 over the 企业库查询 MCP server",
+  "type": "module",
+  "imports": {
+    "#*": "./agent/*"
+  },
+  "scripts": {
+    "dev": "sh ./scripts/with-env.sh eve dev --port 2000 --no-ui",
+    "dev:tui": "sh ./scripts/with-env.sh eve dev --port 2000",
+    "build": "sh ./scripts/with-env.sh eve build",
+    "start": "eve start",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/openai-compatible": "3.0.75",
+    "@tianyancha-agent/company-db": "workspace:*",
+    "ai": "7.0.137",
+    "eve": "catalog:",
+    "just-bash": "3.6.0",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  },
+  "engines": {
+    "node": "24.x"
+  }
+}

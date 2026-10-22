@@ -1,0 +1,22 @@
+{
+  "name": "tianyancha-agent",
+  "private": true,
+  "description": "企业数据分析 agent: eve agent over the 企业库查询 MCP server, with a web chat UI",
+  "type": "module",
+  "packageManager": "pnpm@11.25.0",
+  "engines": {
+    "node": ">=24.15.0",
+    "pnpm": ">=11"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @tianyancha-agent/agent --filter @tianyancha-agent/web dev",
+    "dev:agent": "pnpm --filter @tianyancha-agent/agent dev",
+    "dev:web": "pnpm --filter @tianyancha-agent/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test"
+  },
+  "devDependencies": {
+    "typescript": "catalog:"
+  }
+}
