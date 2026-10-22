@@ -16,6 +16,10 @@ export function Composer({
 }) {
   const [text, setText] = useState('')
   const ref = useRef<HTMLTextAreaElement>(null)
+  // True from compositionstart until just after compositionend. Safari (and some macOS IMEs in
+  // Chrome) fire compositionend *before* the keydown of the Enter that commits the text, with
+  // isComposing already false, so the flag is cleared a tick later to swallow that Enter.
+  const composing = useRef(false)
 
   useEffect(() => {
     const el = ref.current
@@ -43,12 +47,21 @@ export function Composer({
         value={text}
         disabled={disabled}
         onChange={(e) => setText(e.target.value)}
+        onCompositionStart={() => {
+          composing.current = true
+        }}
+        onCompositionEnd={() => {
+          setTimeout(() => {
+            composing.current = false
+          }, 0)
+        }}
         onKeyDown={(e) => {
-          // Enter sends; Shift+Enter is a newline. Never send while an IME is composing (拼音).
-          if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-            e.preventDefault()
-            submit()
-          }
+          // Enter sends; Shift+Enter is a newline. An Enter that commits IME text (拼音 input
+          // typing English, then Enter to keep the letters) must never send.
+          if (e.key !== 'Enter' || e.shiftKey) return
+          if (composing.current || e.nativeEvent.isComposing || e.keyCode === 229) return
+          e.preventDefault()
+          submit()
         }}
         placeholder={busy ? '补充说明会插入当前回答（Enter 发送）…' : '问一个关于杭州或深圳企业的问题…'}
         className="block w-full resize-none bg-transparent px-4 pt-3.5 pb-1 text-[15px] leading-relaxed outline-none placeholder:text-faint disabled:opacity-60"
