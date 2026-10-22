@@ -27,6 +27,8 @@ describe('lintSql', () => {
     expect(lintSql("SELECT 1 FROM t WHERE established_date >= '2026-8-1'")).toHaveLength(1)
     expect(lintSql("SELECT 1 FROM t WHERE province = '浙江省'")).toHaveLength(1)
     expect(lintSql("SELECT 1 FROM t WHERE enterprise_type <> '个体工商户'")).toHaveLength(1)
+    expect(lintSql("SELECT COUNT(*) FROM t WHERE business_scope LIKE '%人工智能%'")).toHaveLength(1)
+    expect(lintSql("SELECT COUNT(*) FROM t WHERE company_name ILIKE '%AI%'")).toHaveLength(1)
   })
 
   it('accepts ISO date comparisons and text grouping', () => {

@@ -7,7 +7,8 @@ export default defineTool({
   description:
     '对企业库执行一条只读 SELECT（PostgreSQL），用于计数、分组汇总、排名和按条件取名单。' +
     '每次全表扫描约 15 秒，能用一条 SQL（COUNT(*) FILTER / GROUP BY）算完就不要拆成多条。' +
-    '最多返回 2000 行；完整结果另存为 CSV 供用户下载。',
+    '最多返回 2000 行；完整结果另存为 CSV 供用户下载。' +
+    '不要用它按业务圈企业（LIKE 经营范围或公司名，如"人工智能""新能源"）：那类问题用 company_find。',
   inputSchema: z.object({
     purpose: z.string().describe('一句话说明这条查询要算什么，会显示给用户，例如"杭州 2026 年 8 月按区县的新增数"'),
     sql: z.string().describe('单条 SELECT 语句'),

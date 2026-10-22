@@ -29,6 +29,11 @@ export function lintSql(sql: string): string[] {
   if (/order\s+by\s+(?:\w+\.)?id\b/i.test(sql) && /\bwhere\b/i.test(sql)) {
     warnings.push('带过滤条件时 ORDER BY id 可能触发服务端语句超时。')
   }
+  if (/\b(?:business_scope|company_name)\s+(?:not\s+)?(?:i?like|~\*?)\s/i.test(sql)) {
+    warnings.push(
+      '按业务圈企业请用 company_find：LIKE 匹配经营范围或公司名会漏掉同义词、混入无关企业。只有用户明确要字面匹配时才这样查，并在回答里说明。',
+    )
+  }
   if (/(?:<>|!=|\bnot\s+in\b)/i.test(sql)) {
     warnings.push('<> / NOT IN 会静默丢掉 NULL 行；需要时加 OR 列 IS NULL。')
   }

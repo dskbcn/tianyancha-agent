@@ -1,12 +1,13 @@
 import { CompanyDbError, findCompanies } from '@tianyancha-agent/company-db'
 import { defineTool } from 'eve/tools'
 import { z } from 'zod'
+import { breakdown, breakdownText } from '#lib/breakdown.ts'
 import { companyDb, MODEL_ROWS, modelTable, saveCsv, UI_PREVIEW_ROWS } from '#lib/db.ts'
 
 export default defineTool({
   description:
-    '列出"做某类业务"的全部企业：先按关键词在名称和经营范围里圈出候选，再按与业务描述的语义相似度打分。' +
-    '用于"杭州近一年做人工智能的公司有哪些"这类要完整名单的问题。耗时 40–60 秒。' +
+    '按"做什么业务"圈定企业的唯一工具：名单、数量、分布都用它（如"杭州近一年做人工智能的公司有多少、在哪些区"）。' +
+    '先按关键词在名称和经营范围里圈出候选，再按与业务描述的语义相似度打分；结果自带按区县、月份、登记状态、行业大类的分布。耗时 40–60 秒。' +
     '先不设 minScore，看 scoreDistribution 再决定截断位置；经验上 0.5 左右是真假分界。',
   inputSchema: z.object({
     description: z
@@ -45,6 +46,7 @@ export default defineTool({
         keywordHits: result.keywordHits,
         semanticOnly: result.semanticOnly,
         scoreDistribution: result.scoreDistribution,
+        breakdown: breakdown(result.rows),
         warnings: [] as string[],
         ms: result.ms,
         file,
@@ -63,7 +65,10 @@ export default defineTool({
     if (output.kind === 'error') return { type: 'text', value: `查找失败：${output.error}` }
     const lines = [
       `关键词候选 ${output.keywordHits} 家，语义补充 ${output.semanticOnly} 家；返回 ${output.rowCount} 家${output.truncated ? `（达到上限，未取完）` : ''}。`,
-      `分数分布：${JSON.stringify(output.scoreDistribution)}`,
+      `分数分布（累计）：${JSON.stringify(output.scoreDistribution)}`,
+      output.rowCount > 0
+        ? `以下分布基于返回的 ${output.rowCount} 家${output.truncated ? '（未取完，用 minScore 收窄后再统计）' : ''}：\n${breakdownText(output.breakdown)}`
+        : '',
       output.rowCount > 0 ? `完整名单已存为 ${output.file?.name}，界面上有下载链接。前 ${Math.min(MODEL_ROWS, output.rowCount)} 家：` : '',
       output.rowCount > 0 ? modelTable(output.columns, output.rows) : '',
     ]
