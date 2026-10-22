@@ -2,7 +2,7 @@ import { createOpenAICompatible } from '@ai-sdk/openai-compatible'
 import { defaultSettingsMiddleware, wrapLanguageModel, type LanguageModel } from 'ai'
 
 /**
- * The Bailian models a user may pick. All six made a correct tool call in a smoke test on
+ * The Bailian models a user may pick. All four made a correct tool call in a smoke test on
  * 2026-10-22; only the two DeepSeek models have been through the golden set (spike 0.3).
  * ALIYUN_BAILIAN_MODELS (comma-separated ids) narrows or extends the list; an id not described
  * below is offered under its own name.
@@ -12,8 +12,6 @@ const DESCRIBED: Record<string, { label: string; note: string; evaluated: boolea
   'deepseek-v4-pro-0813': { label: 'DeepSeek V4 Pro', note: '更强的推理，稍慢', evaluated: true },
   'qwen3.8-max': { label: 'Qwen 3.8 Max', note: '通义旗舰', evaluated: false },
   'qwen3.7-plus': { label: 'Qwen 3.7 Plus', note: '通义均衡', evaluated: false },
-  'kimi-k3': { label: 'Kimi K3', note: '月之暗面', evaluated: false },
-  'glm-5.3': { label: 'GLM 5.3', note: '智谱', evaluated: false },
 }
 
 export const DEFAULT_MODEL = process.env.ALIYUN_BAILIAN_MODEL ?? 'deepseek-v4.1-flash-1017'
